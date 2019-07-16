@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: %s <filepath>\n", argv[0]);
     fprintf(stderr, "       %s <filepath> <query>\n", argv[0]);
     fprintf(stderr, "       %s <filepath> --dump\n", argv[0]);
-    return -1;
+    return 1;
   }
 
   filepath = argv[1];
@@ -43,19 +43,19 @@ int main(int argc, char **argv) {
 	    json_dump(&jhandle, jobject);
 	  } else {
 	    printf("'%s' not found\n", query);
-	    return -1;
+	    return 1;
 	  }
 	}
       }
     } else {
       printf("JSON invalid\n");
-      return -1;
+      return 1;
     }
 
     json_free(&jhandle);
   } else {
     printf("JSON alloc failed\n");
-    return -1;
+    return 1;
   }
 
   clock_gettime(CLOCK_MONOTONIC, &end);

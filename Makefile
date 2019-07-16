@@ -26,7 +26,7 @@
 CC=gcc
 CFLAGS=-I. -O3 -Wall -Wextra
 DEPS = json.h
-OBJ = json.o json_util.o json_dump.o json_file.o json_query.o test.o
+OBJ = json.o json_util.o json_dump.o json_file.o json_query.o example.o
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
