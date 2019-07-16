@@ -33,6 +33,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // https://www.json.org/
 
 static char *json_whitespace(char *ptr, char *eptr);
+static char *json_element(struct jhandle_s *jhandle, char *ptr, char *eptr);
 static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr);
 static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr);
 static char *json_value(struct jhandle_s *jhandle, char *ptr, char *eptr);
@@ -98,10 +99,17 @@ int json_decode(struct jhandle_s *jhandle, char *buf, int len) {
   jhandle->buf = buf;
   jhandle->len = len;
   
-  if (json_object(jhandle, buf, &buf[len]) == buf) {
+  //  if (json_object(jhandle, buf, &buf[len]) == buf) {
+  //    return -1;
+  //  }
+
+  jhandle->max_depth = 1000;
+  jhandle->depth     = 0;
+
+  if (json_element(jhandle, buf, &buf[len]) == buf) {
     return -1;
   }
-
+  
   object = JOBJECT_LAST(jhandle);
   jhandle->root = JOBJECT_OFFSET(jhandle, object);
     
@@ -173,22 +181,53 @@ static char *json_whitespace(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_element(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
   char *optr = ptr;
   char *nptr;
+
+  if (eptr == ptr) goto fail;
+  ptr = json_whitespace(ptr, eptr);
+
+  nptr = json_value(jhandle, ptr, eptr);
+  if (nptr == ptr) {      
+    goto fail;
+  }
+  ptr = nptr;
+  
+  ptr = json_whitespace(ptr, eptr);
+  if (eptr == ptr) goto success;
+  
+  goto fail;
+
+ success:
+  return ptr;
+ fail:
+  return optr;
+
+}
+
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+
+  char *optr  = ptr;
+  char *nptr;
+  char *comma = (void *)0;
 
   struct jobject_s *string;
   struct jobject_s *value;
   struct jobject_s *object;
   struct jobject_s *jobject;
-  int last = -1;
-  int first = -1;
 
+  int last  = -1;
+  int first = -1;
   int count = 0;
 
   if (eptr == ptr) goto fail;
-  if (*ptr == '{') {
+  if ((*ptr == '{') &&
+      (jhandle->depth++ < jhandle->max_depth)) {
     ptr++;
 
     ptr = json_whitespace(ptr, eptr);
@@ -205,6 +244,7 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
     nptr = json_string(jhandle, ptr, eptr);
     if (nptr == ptr) {
+      if (comma) ptr = comma;
       goto fail;
     }
     ptr = nptr;
@@ -250,6 +290,7 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
       ptr++;
       goto success;
     } else if (*ptr == ',') {
+      comma = ptr;
       ptr++;
       goto nextobject;
     } 
@@ -276,24 +317,29 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 /* -------------------------------------------------------------------- */
 static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
-  char *optr = ptr;
+  char *optr  = ptr;
   char *nptr;
+  char *comma = (void *)0;
 
   struct jobject_s *value;
   struct jobject_s *array;
   struct jobject_s *jobject;
-  int last = -1;
+
+  int last  = -1;
   int first = -1;
   int count = 0;
 
   if (eptr == ptr) goto fail;  
-  if (*ptr == '[') {
+  if ((*ptr == '[') &&
+      (jhandle->depth++ < jhandle->max_depth)) {
     ptr++;
-
+    
   nextvalue:
 
     nptr = json_value(jhandle, ptr, eptr);
     if (nptr == ptr) {
+      if (comma) ptr = comma;
+      
       if (eptr == ptr) goto fail;  
       if (*ptr == ']') {
 	ptr++;
@@ -321,6 +367,7 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
       ptr++;
       goto success;
     } else if (*ptr == ',') {
+      comma = ptr;
       ptr++;
       goto nextvalue;
     } 
@@ -432,8 +479,8 @@ static char *json_string(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     ptr++;
 
   nextchar:    
-
-    if (eptr == ptr) goto fail;  
+    
+    if ((eptr == ptr) || ((unsigned char)(*ptr) < 32)) goto fail;    
     if (*ptr == '\\') {
       ptr++;
 

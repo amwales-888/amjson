@@ -77,6 +77,9 @@ struct jhandle_s {
   int count;                      /* Size of jobject pool */
   int used;                       /* Jobjects in use */
   int root;                       /* Index of our root object */
+
+  int max_depth;                  /* RFC 8259 section 9 allows us to seet a max depth */
+  int depth;
 };
 
 /* -------------------------------------------------------------------- */
