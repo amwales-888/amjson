@@ -33,7 +33,7 @@ a comparison.
 
 | Parser            | 487MB | 1.2GB   |
 | ----------------- | ----- | ------- |
-| c-json            | 1.8s  | 5s      |
+| c-json            | 2s    | 5s      |
 | Python 2.7.9 json | 26s   | 56s OOM |
 
 The parser was tested using the JSONTestSuite project found at

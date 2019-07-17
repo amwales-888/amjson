@@ -71,7 +71,7 @@ int json_alloc(struct jhandle_s *jhandle, struct jobject_s *ptr,
     }
   } 
   
-  jhandle->root= -1;
+  jhandle->root = JSON_INVALID;
   return 0;
 }
 
@@ -219,8 +219,8 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
   struct jobject_s *object;
   struct jobject_s *jobject;
 
-  int last  = -1;
-  int first = -1;
+  unsigned int last  = JSON_INVALID;
+  unsigned int first = JSON_INVALID;
   int count = 0;
 
   jhandle->depth++;
@@ -253,7 +253,7 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     /* Add string to list */
     count++;
     string = JOBJECT_LAST(jhandle);
-    if (last == -1) {
+    if (last == JSON_INVALID) {
       first = JOBJECT_OFFSET(jhandle, string);
       last  = first;
     } else {
@@ -306,7 +306,7 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     object->type           = JSON_OBJECT;
     object->u.object.child = first;
     object->u.object.count = count;
-    object->next           = -1;
+    object->next           = JSON_INVALID;
 
     jhandle->depth--;
     return ptr;
@@ -329,8 +329,8 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
   struct jobject_s *array;
   struct jobject_s *jobject;
 
-  int last  = -1;
-  int first = -1;
+  unsigned int last  = JSON_INVALID;
+  unsigned int first = JSON_INVALID;
   int count = 0;
 
   jhandle->depth++;
@@ -358,7 +358,7 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     /* Add value to list */
     count++;
     value = JOBJECT_LAST(jhandle);
-    if (last == -1) {
+    if (last == JSON_INVALID) {
       first = JOBJECT_OFFSET(jhandle, value);
       last  = first;
     } else {
@@ -388,7 +388,7 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     array->type          = JSON_ARRAY;
     array->u.object.child = first;
     array->u.object.count = count;
-    array->next          = -1;  
+    array->next          = JSON_INVALID;  
 
     jhandle->depth--;
     return ptr;
@@ -553,7 +553,7 @@ static char *json_string(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     jobject->type         = JSON_STRING;
     jobject->u.string.ptr = (optr+1);
     jobject->u.string.len = (ptr-1) - (optr+1);
-    jobject->next         = -1;
+    jobject->next         = JSON_INVALID;
     return ptr;
   }
 
@@ -751,7 +751,7 @@ static char *json_number(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     jobject->type           = JSON_NUMBER;
     jobject->u.string.ptr   = optr;
     jobject->u.string.len   = ptr - optr;
-    jobject->next           = -1;
+    jobject->next           = JSON_INVALID;
     return ptr;
   }
   
@@ -772,7 +772,7 @@ static char *json_true(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     struct jobject_s *jobject = jobject_allocate(jhandle);
     if (jobject) { 
       jobject->type = JSON_TRUE;
-      jobject->next = -1;
+      jobject->next = JSON_INVALID;
       return ptr;
     }
   } 
@@ -794,7 +794,7 @@ static char *json_false(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     struct jobject_s *jobject = jobject_allocate(jhandle);
     if (jobject) {
       jobject->type = JSON_FALSE;
-      jobject->next = -1;
+      jobject->next = JSON_INVALID;
       return ptr;
     }
   } 
@@ -815,7 +815,7 @@ static char *json_null(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     struct jobject_s *jobject = jobject_allocate(jhandle);
     if (jobject) {
       jobject->type = JSON_NULL;
-      jobject->next = -1;
+      jobject->next = JSON_INVALID;
       return ptr;
     }
   } 

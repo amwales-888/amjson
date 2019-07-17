@@ -76,7 +76,8 @@ struct jobject_s {
 
   } u;
 
-  int next;                       /* Index of chained jobject, -1 used for end of list */
+#define JSON_INVALID ((unsigned int)-1)
+  unsigned int next;              /* Index of chained jobject, JSON_INVALID used for end of list */
 };
 
 struct jhandle_s {
@@ -91,9 +92,9 @@ struct jhandle_s {
   int  len;                       /* Length of json data */
   
   struct jobject_s *jobject;      /* Preallocated jobject pool */
-  int count;                      /* Size of jobject pool */
-  int used;                       /* Jobjects in use */
-  int root;                       /* Index of our root object */
+  unsigned int count;             /* Size of jobject pool */
+  unsigned int used;              /* Jobjects in use */
+  unsigned int root;              /* Index of our root object */
 
   int depth;
   int max_depth;                  /* RFC 8259 section 9 allows us to set a max depth for
@@ -128,18 +129,18 @@ struct jobject_s *json_query(struct jhandle_s *jhandle, struct jobject_s *jobjec
 /* json_util.c -------------------------------------------------------- */
 
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
-#define JOBJECT_NEXT(jhandle,o)        (((o)->next == -1)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
+#define JOBJECT_NEXT(jhandle,o)        (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
 #define JOBJECT_TYPE(o)                ((o)->type)
 #define JOBJECT_STRING_LEN(o)          ((o)->u.string.len)
 #define JOBJECT_STRING_PTR(o)          ((o)->u.string.ptr)
 #define ARRAY_COUNT(o)                 ((o)->u.object.count)
 #define ARRAY_FIRST(jhandle, o)        (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define ARRAY_NEXT(jhandle, o)         (((o)->next == -1)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
+#define ARRAY_NEXT(jhandle, o)         (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
 #define OBJECT_COUNT(o)                ((o)->u.object.count)
 #define OBJECT_FIRST_KEY(jhandle, o)   (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define OBJECT_NEXT_KEY(jhandle, o)    (((o)->next == -1)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next))
+#define OBJECT_NEXT_KEY(jhandle, o)    (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next))
 #define OBJECT_FIRST_VALUE(jhandle, o) (((o)->u.object.count == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
-#define OBJECT_NEXT_VALUE(jhandle, o)  (((o)->next == -1)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next)))
+#define OBJECT_NEXT_VALUE(jhandle, o)  (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next)))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != JSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
 struct jobject_s *array_index(struct jhandle_s *jhandle, struct jobject_s *array, int index);
