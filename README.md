@@ -39,13 +39,20 @@ crashes.
 
 The implementation stores an object representation of each element
 of the json data with a pool. The pool is either allocated by the
-caller and passed in or left to the parser to allocate as required.
+caller and passed in or size is requested left to the parser to
+allocate and reallocate as required. We keep reallocations to a
+minimum and use a simplistic approach to resizing.
 
-Each object in the pool is 32bits in length and points back to the
-original JSON data, objects are chained together using offset from
+Each object in the pool is 32bytes in length, in the case of strings
+and numbers we points back to the original JSON data. The original
+JSON data is never changed and never copied in we simply store
+pointer and length into the original data.
+
+Parser objects in the pool are chained together using offset from
 the start of the pool. Since all offsets are to objects within the
-pool and are allocated in sequential order, it is trivial to
-reallocate the pool without affecting any references.
+pool and are allocated in sequential order, it is trivial to grow
+the pool by simplying reallocating it without affecting any
+references.
 
 The parser is implemented using a single character lookahead
 recursive decent parser. It is possible that large ammounts of
