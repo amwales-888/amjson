@@ -24,7 +24,7 @@
 ## --------------------------------------------------------------------
 
 CC=gcc
-CFLAGS=-I. -g -Wall -Wextra
+CFLAGS=-I. -O3 -Wall -Wextra -pedantic-errors
 DEPS = json.h
 OBJ = json.o json_util.o json_dump.o json_file.o json_query.o example.o
 

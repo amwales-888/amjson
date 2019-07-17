@@ -86,7 +86,7 @@ static char *query_identifier(char *ptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject_s *json_query(struct jhandle_s *jhandle,
+struct jobject_s *json_queryXXX(struct jhandle_s *jhandle,
 			     struct jobject_s *jobject, char *ptr) {  
   char *nptr;
 
@@ -104,11 +104,7 @@ struct jobject_s *json_query(struct jhandle_s *jhandle,
   for (;;) {
   
     nptr = query_index(ptr);
-    if (nptr == ptr) {
-
-      if ((*ptr == '\0') || (*ptr != '.')) goto fail;  
-      ptr++;
-    
+    if (nptr == ptr) {    
       nptr = query_identifier(ptr);
       if (nptr == ptr) {
 	goto fail;
@@ -123,12 +119,16 @@ struct jobject_s *json_query(struct jhandle_s *jhandle,
       
       if (JOBJECT_TYPE(jobject) != JSON_ARRAY) goto fail;       	
 
-      ptr++;      
+      ptr++; /* '[' */     
       while (ptr != (nptr-1)) {
 	index *= 10;
 	index += *ptr - '0';
 	ptr++;
       }
+
+      ptr++; /* ']' */     
+      if ((*ptr != '\0') &&
+	  (*ptr != '.')) goto fail;  
       
       jobject = array_index(jhandle, jobject, index);
       if (!jobject) goto fail;    
@@ -136,6 +136,65 @@ struct jobject_s *json_query(struct jhandle_s *jhandle,
     ptr = nptr;
     
     if (*ptr == '\0') goto success;
+  }
+
+ success:
+  return jobject;
+ fail:
+  return (void *)0;
+}
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+struct jobject_s *json_query(struct jhandle_s *jhandle,
+			     struct jobject_s *jobject, char *ptr) {  
+
+  if (*ptr == '\0') goto fail;
+  
+  for (;;) {
+  
+    char *nptr;
+
+    nptr = query_index(ptr);
+    if (nptr == ptr) {
+      nptr = query_identifier(ptr);
+      if (nptr == ptr) {
+	goto fail;
+      } else {
+
+	if (JOBJECT_TYPE(jobject) != JSON_OBJECT) goto fail;       	
+	jobject = object_find(jhandle, jobject, ptr, (nptr - ptr));
+	if (!jobject) goto fail;    
+
+	ptr = nptr;
+	if (*ptr == '\0') goto success;
+      }
+    } else {
+      int index = 0;
+      
+      if (JOBJECT_TYPE(jobject) != JSON_ARRAY) goto fail;       	
+
+      ptr++; /* '[' */     
+      while (ptr != (nptr-1)) {
+	index *= 10;
+	index += *ptr - '0';
+	ptr++;
+      }
+      
+      ptr++; /* ']' */     
+
+      jobject = array_index(jhandle, jobject, index);
+      if (!jobject) goto fail;    
+
+      if (*ptr == '\0') goto success;
+
+      if ((*ptr != '.') &&
+	  (*ptr != '['))
+	goto fail;
+
+      if (*ptr == '.') ptr++;      
+    }
+    
   }
 
  success:

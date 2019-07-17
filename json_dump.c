@@ -31,41 +31,45 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 
 static void dump(struct jhandle_s *jhandle, struct jobject_s *jobject,
-		 int count);
+		 int type, int count);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 static void dump(struct jhandle_s *jhandle, struct jobject_s *jobject,
-		 int count) {
+		 int type, int count) {
 
+  char sep = '\0';
+  
   while (jobject) {
 
+    printf("%c", sep);
+    
     switch (JOBJECT_TYPE(jobject)) {
 
     case JSON_STRING:
-      printf("STRING:%.*s\n", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jobject));
+      printf("\"%.*s\"", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jobject));
       break;
     case JSON_NUMBER:
-      printf("NUMBER:%.*s\n", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jobject));
+      printf("%.*s", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jobject));
       break;
     case JSON_OBJECT:
-      printf("OBJECT: {\n");
-      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), 1);
-      printf("}\n");
+      printf("{");
+      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), JSON_OBJECT, 1);
+      printf("}");
       break;
     case JSON_ARRAY:
-      printf("ARRAY: [\n");
-      dump(jhandle, ARRAY_FIRST(jhandle, jobject), 1);
-      printf("]\n");
+      printf("[");
+      dump(jhandle, ARRAY_FIRST(jhandle, jobject), JSON_ARRAY, 1);
+      printf("]");
       break;
     case JSON_TRUE:
-      printf("true\n");
+      printf("true");
       break;
     case JSON_FALSE:
-      printf("false\n");
+      printf("false");
       break;
     case JSON_NULL:
-      printf("null\n");
+      printf("null");
       break;
     }
 
@@ -74,8 +78,14 @@ static void dump(struct jhandle_s *jhandle, struct jobject_s *jobject,
     } else {
       jobject = JOBJECT_NEXT(jhandle,jobject);
     }
-  }
 
+    if ((type == JSON_OBJECT) &&
+	((sep == '\0') || (sep == ','))) {      
+      sep = ':';      
+    } else {
+      sep = ',';
+    }
+  }
 }
 
 /* -------------------------------------------------------------------- */
@@ -84,7 +94,9 @@ void json_dump(struct jhandle_s *jhandle, struct jobject_s *jobject) {
 
   if (!jobject) jobject = JOBJECT_ROOT(jhandle);
   
-  dump(jhandle, jobject, 0);
+  dump(jhandle, jobject, JOBJECT_TYPE(jobject), 0);
+
+  printf("\n");
 }
 
 /* -------------------------------------------------------------------- */

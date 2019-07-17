@@ -53,7 +53,7 @@ int json_file_decode(struct jhandle_s *jhandle, char *pathname) {
   struct stat sb;
   int         result;
   char        *ptr;
-  
+
   fd = open(pathname, O_RDONLY);
   if (fd == -1) goto error1;
 

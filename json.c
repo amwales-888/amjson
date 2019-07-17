@@ -30,8 +30,6 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-// https://www.json.org/
-
 static char *json_whitespace(char *ptr, char *eptr);
 static char *json_element(struct jhandle_s *jhandle, char *ptr, char *eptr);
 static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr);
@@ -60,7 +58,7 @@ int json_alloc(struct jhandle_s *jhandle, struct jobject_s *ptr,
   jhandle->onfree = (void *)0;
 
   if (ptr) {
-    jhandle->userbuffer = 1;
+    jhandle->userbuffer = (unsigned int)1;
     jhandle->jobject    = ptr;
     
   } else {
@@ -99,20 +97,20 @@ int json_decode(struct jhandle_s *jhandle, char *buf, int len) {
   jhandle->buf = buf;
   jhandle->len = len;
   
-  //  if (json_object(jhandle, buf, &buf[len]) == buf) {
-  //    return -1;
-  //  }
-
-  jhandle->max_depth = 1000;
+  jhandle->max_depth = JSON_MAXDEPTH;
   jhandle->depth     = 0;
 
   if (json_element(jhandle, buf, &buf[len]) == buf) {
     return -1;
   }
-  
+
+  /* Our root object can be almost anything.
+   * The only guarentee we have is that it is something
+   * other than whitespace.
+   */
   object = JOBJECT_LAST(jhandle);
   jhandle->root = JOBJECT_OFFSET(jhandle, object);
-    
+  
   return 0;
 }
 
@@ -225,9 +223,11 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
   int first = -1;
   int count = 0;
 
+  jhandle->depth++;
+  
   if (eptr == ptr) goto fail;
   if ((*ptr == '{') &&
-      (jhandle->depth++ < jhandle->max_depth)) {
+      (jhandle->depth < jhandle->max_depth)) {
     ptr++;
 
     ptr = json_whitespace(ptr, eptr);
@@ -245,6 +245,7 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     nptr = json_string(jhandle, ptr, eptr);
     if (nptr == ptr) {
       if (comma) ptr = comma;
+      
       goto fail;
     }
     ptr = nptr;
@@ -306,10 +307,13 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     object->u.object.child = first;
     object->u.object.count = count;
     object->next           = -1;
+
+    jhandle->depth--;
     return ptr;
   }
-
+  
  fail:
+  jhandle->depth--;
   return optr;
 }
 
@@ -329,9 +333,11 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
   int first = -1;
   int count = 0;
 
+  jhandle->depth++;
+
   if (eptr == ptr) goto fail;  
   if ((*ptr == '[') &&
-      (jhandle->depth++ < jhandle->max_depth)) {
+      (jhandle->depth < jhandle->max_depth)) {
     ptr++;
     
   nextvalue:
@@ -339,7 +345,7 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     nptr = json_value(jhandle, ptr, eptr);
     if (nptr == ptr) {
       if (comma) ptr = comma;
-      
+
       if (eptr == ptr) goto fail;  
       if (*ptr == ']') {
 	ptr++;
@@ -383,10 +389,13 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
     array->u.object.child = first;
     array->u.object.count = count;
     array->next          = -1;  
+
+    jhandle->depth--;
     return ptr;
   }
 
  fail:
+  jhandle->depth--;
   return optr;
 }
 
@@ -396,7 +405,7 @@ static char *json_value(struct jhandle_s *jhandle, char *ptr, char *eptr) {
   
   char *optr = ptr;
   char *nptr;
-  
+
   ptr = json_whitespace(ptr, eptr);
 
   nptr = json_string(jhandle, ptr, eptr);
@@ -480,7 +489,10 @@ static char *json_string(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
   nextchar:    
     
-    if ((eptr == ptr) || ((unsigned char)(*ptr) < 32)) goto fail;    
+    if ((eptr == ptr) || ((unsigned char)(*ptr) < 32)) {
+      goto fail;
+    }
+    
     if (*ptr == '\\') {
       ptr++;
 
