@@ -26,12 +26,15 @@ when you make this project.
       --dump - Output JSON representation of data
 ```
 
-You will be able to parse VERY large JSON files with this very
-quickly. Running on a VM, 4 Core E3-1230 V2 @ 3.30GHz 4GB
-RAM + 1GB Swap I was able to parse a file a little over 487MB
-in 1.8 seconds and generated 75000003 objects (32 Bytes each).
-Passing the same file through the default json parser in Python
-2.7.9 took 18 seconds before it was killed by the OOM killer.
+You will be able to parse VERY large JSON files with c-json very
+quickly. Running on a VM, 4 Core E3-1230 V2 @ 3.30GHz 8GB
+RAM + 1GB Swap I tested a 487MB and 1.2GB file using python as
+a comparison.
+
+| Parser            | 487MB | 1.2GB   |
+| ----------------- | ----- | ------- |
+| c-json            | 1.8s  | 5s      |
+| Python 2.7.9 json | 26s   | 56s OOM |
 
 The parser was tested using the JSONTestSuite project found at
 https://github.com/nst/JSONTestSuite all tests passed with no
