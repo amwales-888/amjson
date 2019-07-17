@@ -1,9 +1,8 @@
 # c-json
 Simple JSON parser in C
 
-This project attempts to provide a JSON parser that is able to 
-successfully parse correct JSON formatted data as described in the 
-JSON grammar available at https://www.json.org/
+This project attempts to provide an RFC 8259 compliant JSON parser.
+You can browse the JSON grammar at https://www.json.org/
 
 As per RFC 8259 section (9) we set a maximum depth when parsing 
 elements, this is configurable and a default compile time constant 
@@ -12,8 +11,8 @@ of 1024 has been provided.
 This library is usable with just 2 files being required json.h and 
 json.c ALL other files are optional.
 
-The parser is supplied with a sample utility that is generated
-when you make this project.
+The parser is supplied with a sample commmand line utility that
+is generated when you make this project.
 
 ```
     Usage: ./json <filepath>
@@ -67,3 +66,5 @@ The functions provided outside of json.c include mechanisms to
 dump any JSON object, a query mechanism to select objects from
 the parsed data and a mechanism to memory map a file to be parsed.
 
+A directory 'data' is included that contains some simple JSON
+datasets.
