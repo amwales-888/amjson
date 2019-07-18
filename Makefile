@@ -32,7 +32,7 @@ DEPS=json.h
 
 all: json example1 example2 example3
 
-json: json.o json_util.o json_dump.o json_file.o json_query.o  main.o
+json: json.o json_util.o json_dump.o json_file.o json_query.o json_main.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 example1: json.o example1.o
@@ -48,7 +48,7 @@ example3: json.o json_dump.o json_query.o json_util.o example3.o
 
 clean:
 	rm -f json json.o json_util.o json_dump.o json_file.o json_query.o \
-              main.o example1 example1.o example2 example2.o example3 example3.o
+              json_main.o example1 example1.o example2 example2.o example3 example3.o
 
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------
