@@ -25,19 +25,30 @@
 
 CC=gcc
 CFLAGS=-I. -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer
-DEPS = json.h
-OBJ = json.o json_util.o json_dump.o json_file.o json_query.o example.o
+DEPS=json.h
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-json: $(OBJ)
+all: json example1 example2 example3
+
+json: json.o json_util.o json_dump.o json_file.o json_query.o  main.o
+	$(CC) -o $@ $^ $(CFLAGS)
+
+example1: json.o example1.o
+	$(CC) -o $@ $^ $(CFLAGS)
+
+example2: json.o json_dump.o  example2.o
+	$(CC) -o $@ $^ $(CFLAGS)
+
+example3: json.o json_dump.o json_query.o json_util.o example3.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 .PHONY: clean
 
 clean:
-	rm -f json $(OBJ)
+	rm -f json json.o json_util.o json_dump.o json_file.o json_query.o \
+              main.o example1 example1.o example2 example2.o example3 example3.o
 
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------
