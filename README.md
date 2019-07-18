@@ -15,9 +15,9 @@ The parser is supplied with a sample commmand line utility that
 is generated when you make this project.
 
 ```
-    Usage: ./json <filepath>
-           ./json <filepath> <query>
-           ./json <filepath> --dump
+    Usage: ./json filepath
+           ./json filepath query
+           ./json filepath --dump
 
     filepath - Path to file or '-' to read from stdin
        query - Path to JSON object to display
