@@ -31,26 +31,26 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 
 static char *json_whitespace(char *ptr, char *eptr);
-static char *json_element(struct jhandle_s *jhandle, char *ptr, char *eptr);
-static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr);
-static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr);
-static char *json_value(struct jhandle_s *jhandle, char *ptr, char *eptr);
+static char *json_element(struct jhandle *jhandle, char *ptr, char *eptr);
+static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr);
+static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr);
+static char *json_value(struct jhandle *jhandle, char *ptr, char *eptr);
 static char *json_hexdigit(char *ptr, char *eptr);
-static char *json_string(struct jhandle_s *jhandle, char *ptr, char *eptr);
+static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr);
 static char *json_digit(char *ptr, char *eptr);
 static char *json_integer(char *ptr, char *eptr);
 static char *json_fraction(char *ptr, char *eptr);
 static char *json_exponent(char *ptr, char *eptr);
-static char *json_number(struct jhandle_s *jhandle, char *ptr, char *eptr);
-static char *json_true(struct jhandle_s *jhandle, char *ptr, char *eptr);
-static char *json_false(struct jhandle_s *jhandle, char *ptr, char *eptr);
-static char *json_null(struct jhandle_s *jhandle, char *ptr, char *eptr);
+static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr);
+static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr);
+static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr);
+static char *json_null(struct jhandle *jhandle, char *ptr, char *eptr);
 
-static struct jobject_s *jobject_allocate(struct jhandle_s *jhandle);
+static struct jobject *jobject_allocate(struct jhandle *jhandle);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-int json_alloc(struct jhandle_s *jhandle, struct jobject_s *ptr,
+int json_alloc(struct jhandle *jhandle, struct jobject *ptr,
 	       int count) {
 
   jhandle->count  = count;
@@ -63,8 +63,8 @@ int json_alloc(struct jhandle_s *jhandle, struct jobject_s *ptr,
     
   } else {
     jhandle->userbuffer = 0;
-    jhandle->jobject    = (struct jobject_s *)calloc(jhandle->count,
-						     sizeof(struct jobject_s));
+    jhandle->jobject    = (struct jobject *)calloc(jhandle->count,
+						     sizeof(struct jobject));
 
     if (jhandle->jobject == (void *)0) {
       return -1;
@@ -77,7 +77,7 @@ int json_alloc(struct jhandle_s *jhandle, struct jobject_s *ptr,
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-void json_free(struct jhandle_s *jhandle) {
+void json_free(struct jhandle *jhandle) {
 
   if (jhandle->onfree) {
     jhandle->onfree(jhandle);
@@ -90,9 +90,9 @@ void json_free(struct jhandle_s *jhandle) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-int json_decode(struct jhandle_s *jhandle, char *buf, int len) {
+int json_decode(struct jhandle *jhandle, char *buf, int len) {
 
-  struct jobject_s *object;
+  struct jobject *object;
 
   jhandle->buf = buf;
   jhandle->len = len;
@@ -116,7 +116,7 @@ int json_decode(struct jhandle_s *jhandle, char *buf, int len) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static struct jobject_s *jobject_allocate(struct jhandle_s *jhandle) {
+static struct jobject *jobject_allocate(struct jhandle *jhandle) {
 
   if (jhandle->used < jhandle->count-1) {
     return &jhandle->jobject[jhandle->used++];
@@ -127,7 +127,7 @@ static struct jobject_s *jobject_allocate(struct jhandle_s *jhandle) {
     void *ptr;
       
     jhandle->count = jhandle->count * 2;
-    ptr = realloc(jhandle->jobject, (jhandle->count * sizeof(struct jobject_s)));	  
+    ptr = realloc(jhandle->jobject, (jhandle->count * sizeof(struct jobject)));	  
     if (ptr) {
       jhandle->jobject = ptr;
       return jobject_allocate(jhandle);
@@ -179,7 +179,7 @@ static char *json_whitespace(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_element(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_element(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   char *optr = ptr;
   char *nptr;
@@ -208,16 +208,16 @@ static char *json_element(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   char *optr  = ptr;
   char *nptr;
   char *comma = (void *)0;
 
-  struct jobject_s *string;
-  struct jobject_s *value;
-  struct jobject_s *object;
-  struct jobject_s *jobject;
+  struct jobject *string;
+  struct jobject *value;
+  struct jobject *object;
+  struct jobject *jobject;
 
   unsigned int last  = JSON_INVALID;
   unsigned int first = JSON_INVALID;
@@ -319,15 +319,15 @@ static char *json_object(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   char *optr  = ptr;
   char *nptr;
   char *comma = (void *)0;
 
-  struct jobject_s *value;
-  struct jobject_s *array;
-  struct jobject_s *jobject;
+  struct jobject *value;
+  struct jobject *array;
+  struct jobject *jobject;
 
   unsigned int last  = JSON_INVALID;
   unsigned int first = JSON_INVALID;
@@ -401,7 +401,7 @@ static char *json_array(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_value(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_value(struct jhandle *jhandle, char *ptr, char *eptr) {
   
   char *optr = ptr;
   char *nptr;
@@ -477,9 +477,9 @@ static char *json_hexdigit(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_string(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
 
-  struct jobject_s *jobject;
+  struct jobject *jobject;
   char *optr = ptr;
   char *nptr;
 
@@ -719,9 +719,9 @@ static char *json_exponent(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_number(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
 
-  struct jobject_s *jobject;
+  struct jobject *jobject;
   char *optr = ptr;
   char *nptr;
 
@@ -761,7 +761,7 @@ static char *json_number(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_true(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   char *optr = ptr;
   
@@ -769,7 +769,7 @@ static char *json_true(struct jhandle_s *jhandle, char *ptr, char *eptr) {
       ((*ptr++ == 't') && (*ptr++ == 'r') && 
        (*ptr++ == 'u') && (*ptr++ == 'e'))) {
 
-    struct jobject_s *jobject = jobject_allocate(jhandle);
+    struct jobject *jobject = jobject_allocate(jhandle);
     if (jobject) { 
       jobject->type = JSON_TRUE;
       jobject->next = JSON_INVALID;
@@ -782,7 +782,7 @@ static char *json_true(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_false(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   char *optr = ptr;
 
@@ -791,7 +791,7 @@ static char *json_false(struct jhandle_s *jhandle, char *ptr, char *eptr) {
        (*ptr++ == 'l') && (*ptr++ == 's') &&
        (*ptr++ == 'e'))) {
     
-    struct jobject_s *jobject = jobject_allocate(jhandle);
+    struct jobject *jobject = jobject_allocate(jhandle);
     if (jobject) {
       jobject->type = JSON_FALSE;
       jobject->next = JSON_INVALID;
@@ -804,7 +804,7 @@ static char *json_false(struct jhandle_s *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_null(struct jhandle_s *jhandle, char *ptr, char *eptr) {
+static char *json_null(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   char *optr = ptr;
 
@@ -812,7 +812,7 @@ static char *json_null(struct jhandle_s *jhandle, char *ptr, char *eptr) {
       ((*ptr++ == 'n') && (*ptr++ == 'u') &&
        (*ptr++ == 'l') && (*ptr++ == 'l'))) {
 
-    struct jobject_s *jobject = jobject_allocate(jhandle);
+    struct jobject *jobject = jobject_allocate(jhandle);
     if (jobject) {
       jobject->type = JSON_NULL;
       jobject->next = JSON_INVALID;

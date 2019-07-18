@@ -10,7 +10,7 @@
 int main(int argc __attribute__((unused)),
 	 char **argv __attribute__((unused))) {
 
-  struct jhandle_s jhandle;
+  struct jhandle jhandle;
   char *json = "{ \"name\" : \"bob\" }";
   
   if (json_alloc(&jhandle, (void *)0, 32) == 0) {

@@ -59,7 +59,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* All next/child values are offsets not pointers.
  */
-struct jobject_s {
+struct jobject {
   int type;                       /* One of JSON_OBJECT, JSON_ARRAY... */
 
   union {
@@ -80,18 +80,18 @@ struct jobject_s {
   unsigned int next;              /* Index of chained jobject, JSON_INVALID used for end of list */
 };
 
-struct jhandle_s {
+struct jhandle {
 
   unsigned int userbuffer:1;      /* Did user supply the buffer? */
   int spare:31;
 
   void (*onfree)
-  (struct jhandle_s *jhandle);    /* Function to call on freeing */
+  (struct jhandle *jhandle);      /* Function to call on freeing */
   
   char *buf;                      /* Unparsed json data */
   int  len;                       /* Length of json data */
   
-  struct jobject_s *jobject;      /* Preallocated jobject pool */
+  struct jobject *jobject;        /* Preallocated jobject pool */
   unsigned int count;             /* Size of jobject pool */
   unsigned int used;              /* Jobjects in use */
   unsigned int root;              /* Index of our root object */
@@ -105,26 +105,26 @@ struct jhandle_s {
 /* -------------------------------------------------------------------- */
 
 #define JOBJECT_LAST(jhandle)          (&(jhandle)->jobject[(jhandle)->used-1])
-#define JOBJECT_OFFSET(jhandle, o)     ((((char *)(o)) - ((char *)&(jhandle)->jobject[0]))) / sizeof(struct jobject_s)
+#define JOBJECT_OFFSET(jhandle, o)     ((((char *)(o)) - ((char *)&(jhandle)->jobject[0]))) / sizeof(struct jobject)
 #define JOBJECT_AT(jhandle, offset)    (&(jhandle)->jobject[(offset)])
 
 /* json.c ------------------------------------------------------------- */
 
-int json_alloc(struct jhandle_s *jhandle, struct jobject_s *ptr, int count);
-void json_free(struct jhandle_s *jhandle);
-int json_decode(struct jhandle_s *jhandle, char *buf, int len);
+int json_alloc(struct jhandle *jhandle, struct jobject *ptr, int count);
+void json_free(struct jhandle *jhandle);
+int json_decode(struct jhandle *jhandle, char *buf, int len);
 
 /* json_dump.c -------------------------------------------------------- */
 
-void json_dump(struct jhandle_s *jhandle, struct jobject_s *jobject);
+void json_dump(struct jhandle *jhandle, struct jobject *jobject);
 
 /* json_file.c -------------------------------------------------------- */
 
-int json_file_decode(struct jhandle_s *jhandle, char *pathname);
+int json_file_decode(struct jhandle *jhandle, char *pathname);
 
 /* json_query.c ------------------------------------------------------- */
 
-struct jobject_s *json_query(struct jhandle_s *jhandle, struct jobject_s *jobject, char *ptr);
+struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, char *ptr);
 
 /* json_util.c -------------------------------------------------------- */
 
@@ -143,8 +143,8 @@ struct jobject_s *json_query(struct jhandle_s *jhandle, struct jobject_s *jobjec
 #define OBJECT_NEXT_VALUE(jhandle, o)  (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next)))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != JSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
-struct jobject_s *array_index(struct jhandle_s *jhandle, struct jobject_s *array, int index);
-struct jobject_s *object_find(struct jhandle_s *jhandle, struct jobject_s *object, char *key, int len);
+struct jobject *array_index(struct jhandle *jhandle, struct jobject *array, int index);
+struct jobject *object_find(struct jhandle *jhandle, struct jobject *object, char *key, int len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

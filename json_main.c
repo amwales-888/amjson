@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   struct timespec start;
   struct timespec end;
   double elapsed;
-  struct jhandle_s jhandle;
+  struct jhandle jhandle;
   char *filepath;
 
   if ((argc < 2) || (argc > 3)) {
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 	  json_dump(&jhandle, (void *)0);
 	} else {
 	  char *query = argv[2];
-	  struct jobject_s *jobject = json_query(&jhandle, JOBJECT_ROOT(&jhandle), query);
+	  struct jobject *jobject = json_query(&jhandle, JOBJECT_ROOT(&jhandle), query);
 	  if (jobject) {
 	    json_dump(&jhandle, jobject);
 	  } else {

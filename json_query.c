@@ -86,8 +86,8 @@ static char *query_identifier(char *ptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject_s *json_queryXXX(struct jhandle_s *jhandle,
-			     struct jobject_s *jobject, char *ptr) {  
+struct jobject *json_queryXXX(struct jhandle *jhandle,
+			     struct jobject *jobject, char *ptr) {  
   char *nptr;
 
   nptr = query_identifier(ptr);
@@ -146,8 +146,8 @@ struct jobject_s *json_queryXXX(struct jhandle_s *jhandle,
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject_s *json_query(struct jhandle_s *jhandle,
-			     struct jobject_s *jobject, char *ptr) {  
+struct jobject *json_query(struct jhandle *jhandle,
+			     struct jobject *jobject, char *ptr) {  
 
   if (*ptr == '\0') goto fail;
   

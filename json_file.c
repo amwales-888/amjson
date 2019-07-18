@@ -36,18 +36,18 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-static void munmap_file(struct jhandle_s *jhandle);
+static void munmap_file(struct jhandle *jhandle);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static void munmap_file(struct jhandle_s *jhandle) {
+static void munmap_file(struct jhandle *jhandle) {
 
   munmap(jhandle->buf, jhandle->len);
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-int json_file_decode(struct jhandle_s *jhandle, char *pathname) {
+int json_file_decode(struct jhandle *jhandle, char *pathname) {
 
   int         fd;
   struct stat sb;

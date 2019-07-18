@@ -29,8 +29,8 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject_s *array_index(struct jhandle_s *jhandle,
-			      struct jobject_s *array, int index) {
+struct jobject *array_index(struct jhandle *jhandle,
+			      struct jobject *array, int index) {
 
   int next; 
 
@@ -38,7 +38,7 @@ struct jobject_s *array_index(struct jhandle_s *jhandle,
 
   next = array->u.object.child;
   while (index--) {
-    struct jobject_s *jobject = JOBJECT_AT(jhandle, next);
+    struct jobject *jobject = JOBJECT_AT(jhandle, next);
     next = jobject->next;    
   }
 
@@ -47,8 +47,8 @@ struct jobject_s *array_index(struct jhandle_s *jhandle,
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject_s *object_find(struct jhandle_s *jhandle,
-			      struct jobject_s *object,
+struct jobject *object_find(struct jhandle *jhandle,
+			      struct jobject *object,
 			      char *key, int len) {
 
   int next;
@@ -58,7 +58,7 @@ struct jobject_s *object_find(struct jhandle_s *jhandle,
   next = object->u.object.child;
   do {
 
-    struct jobject_s *jobject = JOBJECT_AT(jhandle, next);
+    struct jobject *jobject = JOBJECT_AT(jhandle, next);
 
     if ((jobject->u.string.len == len) &&
 	(memcmp(jobject->u.string.ptr, key, len) == 0)) {

@@ -30,12 +30,12 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-static void dump(struct jhandle_s *jhandle, struct jobject_s *jobject,
+static void dump(struct jhandle *jhandle, struct jobject *jobject,
 		 int type, int count);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static void dump(struct jhandle_s *jhandle, struct jobject_s *jobject,
+static void dump(struct jhandle *jhandle, struct jobject *jobject,
 		 int type, int count) {
 
   char sep = '\0';
@@ -90,7 +90,7 @@ static void dump(struct jhandle_s *jhandle, struct jobject_s *jobject,
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-void json_dump(struct jhandle_s *jhandle, struct jobject_s *jobject) {
+void json_dump(struct jhandle *jhandle, struct jobject *jobject) {
 
   if (!jobject) jobject = JOBJECT_ROOT(jhandle);
   
