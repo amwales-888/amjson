@@ -63,7 +63,7 @@ int json_alloc(struct jhandle *jhandle, struct jobject *ptr,
     
   } else {
     jhandle->userbuffer = 0;
-    jhandle->jobject    = (struct jobject *)calloc(jhandle->count,
+    jhandle->jobject    = (struct jobject *)malloc((size_t)jhandle->count * 
 						     sizeof(struct jobject));
 
     if (jhandle->jobject == (void *)0) {
@@ -550,10 +550,10 @@ static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
   
   if ((jobject = jobject_allocate(jhandle))) {
 
-    jobject->type         = JSON_STRING;
-    jobject->u.string.ptr = (optr+1);
-    jobject->u.string.len = (ptr-1) - (optr+1);
-    jobject->next         = JSON_INVALID;
+    jobject->type            = JSON_STRING;
+    jobject->u.string.offset = (optr+1) - jhandle->buf;
+    jobject->u.string.len    = (ptr-1) - (optr+1);
+    jobject->next            = JSON_INVALID;
     return ptr;
   }
 
@@ -748,10 +748,10 @@ static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
   
   if ((jobject = jobject_allocate(jhandle))) {
 
-    jobject->type           = JSON_NUMBER;
-    jobject->u.string.ptr   = optr;
-    jobject->u.string.len   = ptr - optr;
-    jobject->next           = JSON_INVALID;
+    jobject->type            = JSON_NUMBER;
+    jobject->u.string.offset = optr - jhandle->buf;
+    jobject->u.string.len    = ptr - optr;
+    jobject->next            = JSON_INVALID;
     return ptr;
   }
   

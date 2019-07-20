@@ -70,8 +70,8 @@ struct jobject {
     } object;
 
     struct {
-      char *ptr;                  /* First character in string NOT '\0' terminated */
-      int  len;                   /* Length of the string */
+      unsigned int offset;        /* First character Offset from start of JSON buffer */ 
+      int          len;           /* Length of the string */
     } string;
 
   } u;
@@ -132,7 +132,7 @@ struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, cha
 #define JOBJECT_NEXT(jhandle,o)        (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
 #define JOBJECT_TYPE(o)                ((o)->type)
 #define JOBJECT_STRING_LEN(o)          ((o)->u.string.len)
-#define JOBJECT_STRING_PTR(o)          ((o)->u.string.ptr)
+#define JOBJECT_STRING_PTR(jhandle, o) (&((jhandle)->buf[(o)->u.string.offset]))
 #define ARRAY_COUNT(o)                 ((o)->u.object.count)
 #define ARRAY_FIRST(jhandle, o)        (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
 #define ARRAY_NEXT(jhandle, o)         (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))

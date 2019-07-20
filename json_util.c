@@ -61,7 +61,8 @@ struct jobject *object_find(struct jhandle *jhandle,
     struct jobject *jobject = JOBJECT_AT(jhandle, next);
 
     if ((jobject->u.string.len == len) &&
-	(memcmp(jobject->u.string.ptr, key, len) == 0)) {
+	(memcmp(&jhandle->buf[jobject->u.string.offset],
+		key, len) == 0)) {
       return JOBJECT_AT(jhandle, jobject->next);
     }
 

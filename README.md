@@ -45,10 +45,11 @@ caller and passed in or size is requested left to the parser to
 allocate and reallocate as required. We keep reallocations to a
 minimum and use a simplistic approach to resizing.
 
-Each object in the pool is 32bytes in length, in the case of strings
-and numbers we points back to the original JSON data. The original
-JSON data is never changed and never copied in we simply store
-pointer and length into the original data.
+Each object in the pool is 16bytes in length, in the case of strings
+and numbers we points back to the original JSON data using offset
+from the start of the buffer. The original JSON data is never
+modified and never copied in we simply store offset and length into
+the original data.
 
 Parser objects in the pool are chained together using offset from
 the start of the pool. Since all offsets are to objects within the

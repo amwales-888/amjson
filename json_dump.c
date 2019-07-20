@@ -47,10 +47,10 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
     switch (JOBJECT_TYPE(jobject)) {
 
     case JSON_STRING:
-      printf("\"%.*s\"", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jobject));
+      printf("\"%.*s\"", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
       break;
     case JSON_NUMBER:
-      printf("%.*s", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jobject));
+      printf("%.*s", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
       break;
     case JSON_OBJECT:
       printf("{");
