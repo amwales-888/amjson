@@ -763,64 +763,58 @@ static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
 /* -------------------------------------------------------------------- */
 static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr) {
 
-  char *optr = ptr;
-  
   if (((eptr - ptr) >= 4) &&
-      ((*ptr++ == 't') && (*ptr++ == 'r') && 
-       (*ptr++ == 'u') && (*ptr++ == 'e'))) {
+      ((ptr[0] == 't') && (ptr[1] == 'r') && 
+       (ptr[2] == 'u') && (ptr[3] == 'e'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle);
     if (jobject) { 
       jobject->type = JSON_TRUE;
       jobject->next = JSON_INVALID;
-      return ptr;
+      return ptr + 4;
     }
   } 
 
-  return optr;
+  return ptr;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr) {
 
-  char *optr = ptr;
-
   if (((eptr - ptr) >= 5) &&
-      ((*ptr++ == 'f') && (*ptr++ == 'a') &&
-       (*ptr++ == 'l') && (*ptr++ == 's') &&
-       (*ptr++ == 'e'))) {
-    
+      ((ptr[0] == 'f') && (ptr[1] == 'a') &&
+       (ptr[2] == 'l') && (ptr[3] == 's') &&
+       (ptr[4] == 'e'))) {
+
     struct jobject *jobject = jobject_allocate(jhandle);
     if (jobject) {
       jobject->type = JSON_FALSE;
       jobject->next = JSON_INVALID;
-      return ptr;
+      return ptr + 5;
     }
   } 
 
-  return optr;
+  return ptr;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 static char *json_null(struct jhandle *jhandle, char *ptr, char *eptr) {
 
-  char *optr = ptr;
-
   if (((eptr - ptr) >= 4) &&
-      ((*ptr++ == 'n') && (*ptr++ == 'u') &&
-       (*ptr++ == 'l') && (*ptr++ == 'l'))) {
+      ((ptr[0] == 'n') && (ptr[1] == 'u') &&
+       (ptr[2] == 'l') && (ptr[3] == 'l'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle);
     if (jobject) {
       jobject->type = JSON_NULL;
       jobject->next = JSON_INVALID;
-      return ptr;
+      return ptr + 4;
     }
   } 
 
-  return optr;
+  return ptr;
 }
 
 /* -------------------------------------------------------------------- */
