@@ -305,7 +305,7 @@ static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr) {
     
     object->type           = JSON_OBJECT;
     object->u.object.child = first;
-    object->u.object.count = count;
+    object->len            = count;
     object->next           = JSON_INVALID;
 
     jhandle->depth--;
@@ -385,10 +385,10 @@ static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr) {
  
   if ((array = jobject_allocate(jhandle))) {
 
-    array->type          = JSON_ARRAY;
+    array->type           = JSON_ARRAY;
     array->u.object.child = first;
-    array->u.object.count = count;
-    array->next          = JSON_INVALID;  
+    array->len            = count;
+    array->next           = JSON_INVALID;  
 
     jhandle->depth--;
     return ptr;
@@ -552,7 +552,7 @@ static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
 
     jobject->type            = JSON_STRING;
     jobject->u.string.offset = (optr+1) - jhandle->buf;
-    jobject->u.string.len    = (ptr-1) - (optr+1);
+    jobject->len             = (ptr-1) - (optr+1);
     jobject->next            = JSON_INVALID;
     return ptr;
   }
@@ -750,7 +750,7 @@ static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
 
     jobject->type            = JSON_NUMBER;
     jobject->u.string.offset = optr - jhandle->buf;
-    jobject->u.string.len    = ptr - optr;
+    jobject->len             = ptr - optr;
     jobject->next            = JSON_INVALID;
     return ptr;
   }

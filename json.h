@@ -41,13 +41,13 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-#define JSON_OBJECT 1
-#define JSON_ARRAY  2
-#define JSON_STRING 3
-#define JSON_NUMBER 4
-#define JSON_TRUE   5
-#define JSON_FALSE  6
-#define JSON_NULL   7
+#define JSON_OBJECT 1 
+#define JSON_ARRAY  2 
+#define JSON_STRING 3 
+#define JSON_NUMBER 4 
+#define JSON_TRUE   5 
+#define JSON_FALSE  6 
+#define JSON_NULL   7 
 
 
 /* -------------------------------------------------------------------- */
@@ -60,24 +60,24 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* All next/child values are offsets not pointers.
  */
 struct jobject {
-  int type;                       /* One of JSON_OBJECT, JSON_ARRAY... */
 
+  unsigned int type:3;            /* One of JSON_OBJECT, JSON_ARRAY... */
+  unsigned int len:29;            /* Count of ALL children OR length of string
+				   * MAX:2^29-1 (536870911) */
   union {
-
     struct {
-      int count;                  /* Count of ALL children */
-      int child;                  /* Index of first child */
+      unsigned int child;         /* Index of first child */
     } object;
 
     struct {
       unsigned int offset;        /* First character Offset from start of JSON buffer */ 
-      int          len;           /* Length of the string */
     } string;
 
   } u;
 
 #define JSON_INVALID ((unsigned int)-1)
-  unsigned int next;              /* Index of chained jobject, JSON_INVALID used for end of list */
+  unsigned int next;              /* Index of chained jobject, JSON_INVALID 
+				   * used for end of list */
 };
 
 struct jhandle {
@@ -131,20 +131,20 @@ struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, cha
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
 #define JOBJECT_NEXT(jhandle,o)        (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
 #define JOBJECT_TYPE(o)                ((o)->type)
-#define JOBJECT_STRING_LEN(o)          ((o)->u.string.len)
+#define JOBJECT_STRING_LEN(o)          ((o)->len)
 #define JOBJECT_STRING_PTR(jhandle, o) (&((jhandle)->buf[(o)->u.string.offset]))
-#define ARRAY_COUNT(o)                 ((o)->u.object.count)
-#define ARRAY_FIRST(jhandle, o)        (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define ARRAY_COUNT(o)                 ((o)->len)
+#define ARRAY_FIRST(jhandle, o)        (((o)->len == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
 #define ARRAY_NEXT(jhandle, o)         (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
-#define OBJECT_COUNT(o)                ((o)->u.object.count)
-#define OBJECT_FIRST_KEY(jhandle, o)   (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define OBJECT_COUNT(o)                ((o)->len)
+#define OBJECT_FIRST_KEY(jhandle, o)   (((o)->len == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
 #define OBJECT_NEXT_KEY(jhandle, o)    (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next))
-#define OBJECT_FIRST_VALUE(jhandle, o) (((o)->u.object.count == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
+#define OBJECT_FIRST_VALUE(jhandle, o) (((o)->len == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
 #define OBJECT_NEXT_VALUE(jhandle, o)  (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next)))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != JSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
-struct jobject *array_index(struct jhandle *jhandle, struct jobject *array, int index);
-struct jobject *object_find(struct jhandle *jhandle, struct jobject *object, char *key, int len);
+struct jobject *array_index(struct jhandle *jhandle, struct jobject *array, unsigned int index);
+struct jobject *object_find(struct jhandle *jhandle, struct jobject *object, char *key, unsigned int len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

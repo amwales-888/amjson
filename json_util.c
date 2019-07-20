@@ -30,11 +30,11 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *array_index(struct jhandle *jhandle,
-			      struct jobject *array, int index) {
+			      struct jobject *array, unsigned int index) {
 
   int next; 
 
-  if (index >= array->u.object.count) return (void *)0;
+  if (index >= array->len) return (void *)0;
 
   next = array->u.object.child;
   while (index--) {
@@ -48,19 +48,20 @@ struct jobject *array_index(struct jhandle *jhandle,
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *object_find(struct jhandle *jhandle,
-			      struct jobject *object,
-			      char *key, int len) {
+			    struct jobject *object,
+			    char *key,
+			    unsigned int len) {
 
   int next;
 
-  if (object->u.object.count == 0) return (void *)0;
+  if (object->len == 0) return (void *)0;
 
   next = object->u.object.child;
   do {
 
     struct jobject *jobject = JOBJECT_AT(jhandle, next);
 
-    if ((jobject->u.string.len == len) &&
+    if ((jobject->len == len) &&
 	(memcmp(&jhandle->buf[jobject->u.string.offset],
 		key, len) == 0)) {
       return JOBJECT_AT(jhandle, jobject->next);

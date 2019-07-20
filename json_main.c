@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   double elapsed;
   struct jhandle jhandle;
   char *filepath;
-
+  
   if ((argc < 2) || (argc > 3)) {
     fprintf(stderr, "Usage: %s filepath\n", argv[0]);
     fprintf(stderr, "       %s filepath query\n", argv[0]);
