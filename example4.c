@@ -15,44 +15,31 @@ int main(int argc __attribute__((unused)),
   struct jhandle jhandle;
   if (json_alloc(&jhandle, (void *)0, 2) == 0) {
 
-    struct jobject *jobject;
-    struct jobject *jobjectXXX;
+    struct jobject *array;
 
-#if 0
-    jobject  = json_array_new(&jhandle,
-			  json_string_new(&jhandle, "hello", strlen("hello")),
-			  json_string_new(&jhandle, "1", strlen("1")),
-			  json_object_new(&jhandle,
-				      json_string_new(&jhandle, "name", strlen("name")),
-				      json_string_new(&jhandle, "angelo", strlen("angelo")),
-				      (void *)0),
-			  json_string_new(&jhandle, "2", strlen("2")),
-			  json_string_new(&jhandle, "3", strlen("3")),
-			  json_string_new(&jhandle, "4", strlen("4")),
-			  (void *)0);
-#endif
-
-    jobject = json_object_new(&jhandle, (void *)0);    
-    json_object_add(&jhandle,
-		    jobject, 
-		    json_string_new(&jhandle, "name", strlen("name")),
-		    json_string_new(&jhandle, "angelo", strlen("angelo")));
-
-    jobjectXXX = json_array_new(&jhandle, (void *)0);
-    json_array_add(&jhandle,
-		   jobjectXXX,
-		   json_string_new(&jhandle, "1", strlen("1")));
+    array = json_array_new(&jhandle,
+			   json_string_new(&jhandle, "0", strlen("0")),
+			   json_string_new(&jhandle, "1", strlen("1")),
+			   json_object_new(&jhandle,
+					   json_string_new(&jhandle, "name", strlen("name")),
+					   json_string_new(&jhandle, "bob", strlen("bob")),
+					   (void *)0),
+			   json_string_new(&jhandle, "2", strlen("2")),
+			   json_string_new(&jhandle, "3", strlen("3")),
+			   json_string_new(&jhandle, "4", strlen("4")),
+			   (void *)0);
 
     json_array_add(&jhandle,
-		   jobjectXXX,
-		   json_string_new(&jhandle, "2", strlen("2")));
+		   array, 
+		   json_string_new(&jhandle, "5", strlen("5")));
 
-    json_object_add(&jhandle,
-		    jobject, 
-		    json_string_new(&jhandle, "array", strlen("array")),
-		    jobjectXXX);
-        
-    json_dump(&jhandle, jobject);
+    json_array_add(&jhandle,
+		   array, 
+		   json_object_new(&jhandle,
+				   json_string_new(&jhandle, "name", strlen("name")),
+				   json_string_new(&jhandle, "dave", strlen("dave")),
+				   (void *)0));    
+    json_dump(&jhandle, array);
 
     json_free(&jhandle);
   }
