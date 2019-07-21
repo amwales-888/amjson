@@ -38,11 +38,11 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
 static void dump(struct jhandle *jhandle, struct jobject *jobject,
 		 int type, int count) {
 
-  char sep = '\0';
+  char *sep = "";
   
   while (jobject) {
 
-    printf("%c", sep);
+    printf("%s", sep);
     
     switch (JOBJECT_TYPE(jobject)) {
 
@@ -80,10 +80,10 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
     }
 
     if ((type == JSON_OBJECT) &&
-	((sep == '\0') || (sep == ','))) {      
-      sep = ':';      
+	((*sep == '\0') || (*sep == ','))) {      
+      sep = ":";      
     } else {
-      sep = ',';
+      sep = ",";
     }
   }
 }
