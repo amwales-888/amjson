@@ -140,7 +140,11 @@ int main(int argc, char **argv) {
 	}
       }
     } else {
-      printf("JSON invalid\n");
+      if (errno == ENOMEM) {
+	printf("Failed allocating memory\n");
+      } else {
+	printf("JSON invalid\n");
+      }      
       return 1;
     }
 

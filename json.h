@@ -39,6 +39,11 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define _JSON_H_
 
 /* -------------------------------------------------------------------- */
+
+#include <setjmp.h>
+#include <sys/types.h>
+
+/* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
 #define JSON_OBJECT 1 
@@ -88,8 +93,11 @@ struct jhandle {
   void (*onfree)
   (struct jhandle *jhandle);      /* Function to call on freeing */
   
-  char *buf;                      /* Unparsed json data */
-  int  len;                       /* Length of json data */
+  char   *buf;                    /* Unparsed json data */
+  size_t len;                     /* Length of json data */
+
+  jmp_buf setjmp_ctx;             /* Allows us to return from allocation failure 
+				   * from deeply nested calls */
   
   struct jobject *jobject;        /* Preallocated jobject pool */
   unsigned int count;             /* Size of jobject pool */
@@ -110,9 +118,9 @@ struct jhandle {
 
 /* json.c ------------------------------------------------------------- */
 
-int json_alloc(struct jhandle *jhandle, struct jobject *ptr, int count);
+int json_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count);
 void json_free(struct jhandle *jhandle);
-int json_decode(struct jhandle *jhandle, char *buf, int len);
+int json_decode(struct jhandle *jhandle, char *buf, size_t len);
 
 /* json_dump.c -------------------------------------------------------- */
 

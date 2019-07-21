@@ -24,6 +24,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * -------------------------------------------------------------------- */
 
 #include <stdlib.h>
+#include <errno.h>
 
 #include "json.h"
 
@@ -51,28 +52,28 @@ static struct jobject *jobject_allocate(struct jhandle *jhandle);
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 int json_alloc(struct jhandle *jhandle, struct jobject *ptr,
-	       int count) {
+	       unsigned int count) {
 
   jhandle->count  = count;
   jhandle->used   = 0;
   jhandle->onfree = (void *)0;
+  jhandle->root   = JSON_INVALID;
 
   if (ptr) {
     jhandle->userbuffer = (unsigned int)1;
     jhandle->jobject    = ptr;
-    
-  } else {
-    jhandle->userbuffer = 0;
-    jhandle->jobject    = (struct jobject *)malloc((size_t)jhandle->count * 
-						     sizeof(struct jobject));
 
-    if (jhandle->jobject == (void *)0) {
-      return -1;
-    }
-  } 
-  
-  jhandle->root = JSON_INVALID;
-  return 0;
+    return 0;
+  }
+
+  jhandle->userbuffer = 0;
+  if ((jhandle->jobject = (struct jobject *)malloc((size_t)jhandle->count *
+						   sizeof(struct jobject)))) {
+    return 0;
+  }
+
+  errno = EINVAL;
+  return -1;
 }
 
 /* -------------------------------------------------------------------- */
@@ -90,7 +91,7 @@ void json_free(struct jhandle *jhandle) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-int json_decode(struct jhandle *jhandle, char *buf, int len) {
+int json_decode(struct jhandle *jhandle, char *buf, size_t len) {
 
   struct jobject *object;
 
@@ -100,7 +101,18 @@ int json_decode(struct jhandle *jhandle, char *buf, int len) {
   jhandle->max_depth = JSON_MAXDEPTH;
   jhandle->depth     = 0;
 
+  if (setjmp(jhandle->setjmp_ctx) == 1) {
+
+    /* We returned from calling json_element() with an 
+     * allocation failure.
+     */
+    errno = ENOMEM;
+    return -1;
+  }
+  
   if (json_element(jhandle, buf, &buf[len]) == buf) {
+
+    errno = EINVAL;
     return -1;
   }
 
@@ -118,14 +130,14 @@ int json_decode(struct jhandle *jhandle, char *buf, int len) {
 /* -------------------------------------------------------------------- */
 static struct jobject *jobject_allocate(struct jhandle *jhandle) {
 
-  if (jhandle->used < jhandle->count-1) {
+  if (jhandle->used < jhandle->count) {
     return &jhandle->jobject[jhandle->used++];
   }
 
   if (!jhandle->userbuffer) {
     
     void *ptr;
-      
+    
     jhandle->count = jhandle->count * 2;
     ptr = realloc(jhandle->jobject, (jhandle->count * sizeof(struct jobject)));	  
     if (ptr) {
@@ -134,6 +146,9 @@ static struct jobject *jobject_allocate(struct jhandle *jhandle) {
     }
   }
 
+  /* Jump right back to json_decode() 
+   */   
+  longjmp(jhandle->setjmp_ctx, 1);  
   return (void *)0;
 }
 
@@ -204,7 +219,6 @@ static char *json_element(struct jhandle *jhandle, char *ptr, char *eptr) {
   return optr;
 
 }
-
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -301,16 +315,15 @@ static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr) {
 
  success:
   
-  if ((object = jobject_allocate(jhandle))) {
-    
-    object->type           = JSON_OBJECT;
-    object->u.object.child = first;
-    object->len            = count;
-    object->next           = JSON_INVALID;
+  object = jobject_allocate(jhandle);
+  
+  object->type           = JSON_OBJECT;
+  object->u.object.child = first;
+  object->len            = count;
+  object->next           = JSON_INVALID;
 
-    jhandle->depth--;
-    return ptr;
-  }
+  jhandle->depth--;
+  return ptr;
   
  fail:
   jhandle->depth--;
@@ -383,16 +396,15 @@ static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr) {
 
  success:
  
-  if ((array = jobject_allocate(jhandle))) {
-
-    array->type           = JSON_ARRAY;
-    array->u.object.child = first;
-    array->len            = count;
-    array->next           = JSON_INVALID;  
-
-    jhandle->depth--;
-    return ptr;
-  }
+  array = jobject_allocate(jhandle);
+  
+  array->type           = JSON_ARRAY;
+  array->u.object.child = first;
+  array->len            = count;
+  array->next           = JSON_INVALID;  
+  
+  jhandle->depth--;
+  return ptr;
 
  fail:
   jhandle->depth--;
@@ -548,14 +560,13 @@ static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
 
  success:
   
-  if ((jobject = jobject_allocate(jhandle))) {
+  jobject = jobject_allocate(jhandle);
 
-    jobject->type            = JSON_STRING;
-    jobject->u.string.offset = (optr+1) - jhandle->buf;
-    jobject->len             = (ptr-1) - (optr+1);
-    jobject->next            = JSON_INVALID;
-    return ptr;
-  }
+  jobject->type            = JSON_STRING;
+  jobject->u.string.offset = (optr+1) - jhandle->buf;
+  jobject->len             = (ptr-1) - (optr+1);
+  jobject->next            = JSON_INVALID;
+  return ptr;
 
  fail:
   return optr;
@@ -746,14 +757,13 @@ static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   ptr = json_exponent(ptr, eptr);
   
-  if ((jobject = jobject_allocate(jhandle))) {
-
-    jobject->type            = JSON_NUMBER;
-    jobject->u.string.offset = optr - jhandle->buf;
-    jobject->len             = ptr - optr;
-    jobject->next            = JSON_INVALID;
-    return ptr;
-  }
+  jobject = jobject_allocate(jhandle);
+  
+  jobject->type            = JSON_NUMBER;
+  jobject->u.string.offset = optr - jhandle->buf;
+  jobject->len             = ptr - optr;
+  jobject->next            = JSON_INVALID;
+  return ptr;
   
  fail:
   return optr;
@@ -768,11 +778,9 @@ static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr) {
        (ptr[2] == 'u') && (ptr[3] == 'e'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle);
-    if (jobject) { 
-      jobject->type = JSON_TRUE;
-      jobject->next = JSON_INVALID;
-      return ptr + 4;
-    }
+    jobject->type = JSON_TRUE;
+    jobject->next = JSON_INVALID;
+    return ptr + 4;
   } 
 
   return ptr;
@@ -788,11 +796,9 @@ static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr) {
        (ptr[4] == 'e'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle);
-    if (jobject) {
-      jobject->type = JSON_FALSE;
-      jobject->next = JSON_INVALID;
-      return ptr + 5;
-    }
+    jobject->type = JSON_FALSE;
+    jobject->next = JSON_INVALID;
+    return ptr + 5;
   } 
 
   return ptr;
@@ -807,11 +813,9 @@ static char *json_null(struct jhandle *jhandle, char *ptr, char *eptr) {
        (ptr[2] == 'l') && (ptr[3] == 'l'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle);
-    if (jobject) {
-      jobject->type = JSON_NULL;
-      jobject->next = JSON_INVALID;
-      return ptr + 4;
-    }
+    jobject->type = JSON_NULL;
+    jobject->next = JSON_INVALID;
+    return ptr + 4;
   } 
 
   return ptr;
