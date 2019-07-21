@@ -25,6 +25,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 
 #include "json.h"
 
@@ -47,26 +48,29 @@ static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr);
 static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr);
 static char *json_null(struct jhandle *jhandle, char *ptr, char *eptr);
 
-static struct jobject *jobject_allocate(struct jhandle *jhandle);
-
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 int json_alloc(struct jhandle *jhandle, struct jobject *ptr,
-	       unsigned int count) {
+               unsigned int count) {
 
-  jhandle->count  = count;
-  jhandle->used   = 0;
-  jhandle->onfree = (void *)0;
-  jhandle->root   = JSON_INVALID;
+  memset(jhandle, 0, sizeof(struct jhandle));
+  
+  jhandle->count   = count;
+  jhandle->root    = JSON_INVALID;
 
+  /*  
+  jhandle->used       = 0;
+  jhandle->onfree     = (void *)0;
+  jhandle->useljmp    = 0;
+  jhandle->userbuffer = 0;
+  */
+  
   if (ptr) {
     jhandle->userbuffer = (unsigned int)1;
     jhandle->jobject    = ptr;
-
     return 0;
   }
 
-  jhandle->userbuffer = 0;
   if ((jhandle->jobject = (struct jobject *)malloc((size_t)jhandle->count *
 						   sizeof(struct jobject)))) {
     return 0;
@@ -101,6 +105,7 @@ int json_decode(struct jhandle *jhandle, char *buf, size_t len) {
   jhandle->max_depth = JSON_MAXDEPTH;
   jhandle->depth     = 0;
 
+  jhandle->useljmp = 1;
   if (setjmp(jhandle->setjmp_ctx) == 1) {
 
     /* We returned from calling json_element() with an 
@@ -128,27 +133,34 @@ int json_decode(struct jhandle *jhandle, char *buf, size_t len) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static struct jobject *jobject_allocate(struct jhandle *jhandle) {
+struct jobject *jobject_allocate(struct jhandle *jhandle, int count) {
 
-  if (jhandle->used < jhandle->count) {
-    return &jhandle->jobject[jhandle->used++];
+  if (jhandle->used + count < jhandle->count) {
+
+    struct jobject *jobject = &jhandle->jobject[jhandle->used];
+    jhandle->used += count;
+    
+    return jobject;
   }
 
   if (!jhandle->userbuffer) {
     
     void *ptr;
     
-    jhandle->count = jhandle->count * 2;
+    jhandle->count = (jhandle->count * 2) + count;
     ptr = realloc(jhandle->jobject, (jhandle->count * sizeof(struct jobject)));	  
     if (ptr) {
       jhandle->jobject = ptr;
-      return jobject_allocate(jhandle);
+      return jobject_allocate(jhandle, count);
     }
   }
 
-  /* Jump right back to json_decode() 
-   */   
-  longjmp(jhandle->setjmp_ctx, 1);  
+  if (jhandle->useljmp) {
+    /* Jump right back to json_decode() 
+     */   
+    longjmp(jhandle->setjmp_ctx, 1);  
+  }
+    
   return (void *)0;
 }
 
@@ -165,22 +177,14 @@ static struct jobject *jobject_allocate(struct jhandle *jhandle) {
 */
 static unsigned char whitespace[] = {
 
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
 static char *json_whitespace(char *ptr, char *eptr) {
 
@@ -315,7 +319,7 @@ static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr) {
 
  success:
   
-  object = jobject_allocate(jhandle);
+  object = jobject_allocate(jhandle, 1);
   
   object->type           = JSON_OBJECT;
   object->u.object.child = first;
@@ -396,7 +400,7 @@ static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr) {
 
  success:
  
-  array = jobject_allocate(jhandle);
+  array = jobject_allocate(jhandle, 1);
   
   array->type           = JSON_ARRAY;
   array->u.object.child = first;
@@ -460,22 +464,14 @@ static char *json_value(struct jhandle *jhandle, char *ptr, char *eptr) {
 */
 static unsigned char hexdigit[] = {
 
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-  0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,
+  0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
 static char *json_hexdigit(char *ptr, char *eptr) {
 
@@ -560,7 +556,7 @@ static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
 
  success:
   
-  jobject = jobject_allocate(jhandle);
+  jobject = jobject_allocate(jhandle, 1);
 
   jobject->type            = JSON_STRING;
   jobject->u.string.offset = (optr+1) - jhandle->buf;
@@ -582,22 +578,14 @@ static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
 */
 static unsigned char digit[] = {
 
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
 static char *json_digit(char *ptr, char *eptr) {
 
@@ -619,22 +607,14 @@ static char *json_digit(char *ptr, char *eptr) {
 */
 static unsigned char real[] = {
 
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
 static char *json_integer(char *ptr, char *eptr) {
 
@@ -757,7 +737,7 @@ static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
 
   ptr = json_exponent(ptr, eptr);
   
-  jobject = jobject_allocate(jhandle);
+  jobject = jobject_allocate(jhandle, 1);
   
   jobject->type            = JSON_NUMBER;
   jobject->u.string.offset = optr - jhandle->buf;
@@ -777,7 +757,7 @@ static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr) {
       ((ptr[0] == 't') && (ptr[1] == 'r') && 
        (ptr[2] == 'u') && (ptr[3] == 'e'))) {
 
-    struct jobject *jobject = jobject_allocate(jhandle);
+    struct jobject *jobject = jobject_allocate(jhandle, 1);
     jobject->type = JSON_TRUE;
     jobject->next = JSON_INVALID;
     return ptr + 4;
@@ -795,7 +775,7 @@ static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr) {
        (ptr[2] == 'l') && (ptr[3] == 's') &&
        (ptr[4] == 'e'))) {
 
-    struct jobject *jobject = jobject_allocate(jhandle);
+    struct jobject *jobject = jobject_allocate(jhandle, 1);
     jobject->type = JSON_FALSE;
     jobject->next = JSON_INVALID;
     return ptr + 5;
@@ -812,7 +792,7 @@ static char *json_null(struct jhandle *jhandle, char *ptr, char *eptr) {
       ((ptr[0] == 'n') && (ptr[1] == 'u') &&
        (ptr[2] == 'l') && (ptr[3] == 'l'))) {
 
-    struct jobject *jobject = jobject_allocate(jhandle);
+    struct jobject *jobject = jobject_allocate(jhandle, 1);
     jobject->type = JSON_NULL;
     jobject->next = JSON_INVALID;
     return ptr + 4;

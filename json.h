@@ -88,21 +88,22 @@ struct jobject {
 struct jhandle {
 
   unsigned int userbuffer:1;      /* Did user supply the buffer? */
-  int spare:31;
+  int spare:30;
 
   void (*onfree)
   (struct jhandle *jhandle);      /* Function to call on freeing */
   
-  char   *buf;                    /* Unparsed json data */
-  size_t len;                     /* Length of json data */
-
-  jmp_buf setjmp_ctx;             /* Allows us to return from allocation failure 
+  char         *buf;              /* Unparsed json data */
+  size_t       len;               /* Length of json data */
+  
+  unsigned int useljmp:1;         /* We want to longjmp on allocation failure */
+  jmp_buf      setjmp_ctx;        /* Allows us to return from allocation failure 
 				   * from deeply nested calls */
   
   struct jobject *jobject;        /* Preallocated jobject pool */
-  unsigned int count;             /* Size of jobject pool */
-  unsigned int used;              /* Jobjects in use */
-  unsigned int root;              /* Index of our root object */
+  unsigned int   count;           /* Size of jobject pool */
+  unsigned int   used;            /* Jobjects in use */
+  unsigned int   root;            /* Index of our root object */
 
   int depth;
   int max_depth;                  /* RFC 8259 section 9 allows us to set a max depth for
@@ -122,6 +123,8 @@ int json_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count)
 void json_free(struct jhandle *jhandle);
 int json_decode(struct jhandle *jhandle, char *buf, size_t len);
 
+struct jobject *jobject_allocate(struct jhandle *jhandle, int count);
+
 /* json_dump.c -------------------------------------------------------- */
 
 void json_dump(struct jhandle *jhandle, struct jobject *jobject);
@@ -140,7 +143,7 @@ struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, cha
 #define JOBJECT_NEXT(jhandle,o)        (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
 #define JOBJECT_TYPE(o)                ((o)->type)
 #define JOBJECT_STRING_LEN(o)          ((o)->len)
-#define JOBJECT_STRING_PTR(jhandle, o) (&((jhandle)->buf[(o)->u.string.offset]))
+#define JOBJECT_STRING_PTR(jhandle, o) (((jhandle)->buf)?(&((jhandle)->buf[(o)->u.string.offset])):((char *)(&(jhandle)->jobject[(o)->u.string.offset])))
 #define ARRAY_COUNT(o)                 ((o)->len)
 #define ARRAY_FIRST(jhandle, o)        (((o)->len == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
 #define ARRAY_NEXT(jhandle, o)         (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
@@ -153,6 +156,19 @@ struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, cha
 
 struct jobject *array_index(struct jhandle *jhandle, struct jobject *array, unsigned int index);
 struct jobject *object_find(struct jhandle *jhandle, struct jobject *object, char *key, unsigned int len);
+
+/* json_mod.c -------------------------------------------------------- */
+
+struct jobject *json_string_new(struct jhandle *jhandle, char *ptr, int len);
+struct jobject *json_object_add(struct jhandle *jhandle,
+				struct jobject *object,
+				struct jobject *string,
+				struct jobject *value);
+struct jobject *json_object_new(struct jhandle *jhandle, ...);
+struct jobject *json_array_new(struct jhandle *jhandle, ...);
+struct jobject *json_array_add(struct jhandle *jhandle,
+			       struct jobject *array,
+			       struct jobject *value);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
