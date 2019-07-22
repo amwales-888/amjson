@@ -54,7 +54,6 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define JSON_FALSE  6 
 #define JSON_NULL   7 
 
-
 /* -------------------------------------------------------------------- */
 
 #define JSON_MAXDEPTH 1024

@@ -186,7 +186,10 @@ static unsigned char whitespace[] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-static char *json_whitespace(char *ptr, char *eptr) {
+static char *json_whitespace(char *xptr, char *xeptr) {
+
+  register char *ptr  = xptr;
+  register char *eptr = xeptr;
 
   while ((ptr < eptr) &&
 	 (whitespace[(unsigned char)(*ptr)])) {
@@ -198,9 +201,9 @@ static char *json_whitespace(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_element(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_element(struct jhandle *jhandle, char *optr, char *eptr) {
 
-  char *optr = ptr;
+  register char *ptr = optr;
   char *nptr;
 
   if (eptr == ptr) goto fail;
@@ -226,18 +229,11 @@ static char *json_element(struct jhandle *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_object(struct jhandle *jhandle, char *optr, char *eptr) {
 
-  char *optr  = ptr;
-  char *nptr;
-  char *comma = (void *)0;
-
-  struct jobject *string;
-  struct jobject *value;
+  register char *ptr = optr;
   struct jobject *object;
-  struct jobject *jobject;
 
-  unsigned int last  = JSON_INVALID;
   unsigned int first = JSON_INVALID;
   int count = 0;
 
@@ -246,8 +242,16 @@ static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr) {
   if (eptr == ptr) goto fail;
   if ((*ptr == '{') &&
       (jhandle->depth < jhandle->max_depth)) {
-    ptr++;
 
+    char *nptr;
+    char *comma = (void *)0;
+    struct jobject *string;
+    struct jobject *value;
+    struct jobject *jobject;
+
+    unsigned int last = JSON_INVALID;
+
+    ptr++;
     ptr = json_whitespace(ptr, eptr);
 
     if (eptr == ptr) goto fail;  
@@ -336,17 +340,11 @@ static char *json_object(struct jhandle *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_array(struct jhandle *jhandle, char *optr, char *eptr) {
 
-  char *optr  = ptr;
-  char *nptr;
-  char *comma = (void *)0;
-
-  struct jobject *value;
+  register char *ptr = optr;
   struct jobject *array;
-  struct jobject *jobject;
 
-  unsigned int last  = JSON_INVALID;
   unsigned int first = JSON_INVALID;
   int count = 0;
 
@@ -355,6 +353,13 @@ static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr) {
   if (eptr == ptr) goto fail;  
   if ((*ptr == '[') &&
       (jhandle->depth < jhandle->max_depth)) {
+
+    char *nptr;
+    char *comma = (void *)0;
+    struct jobject *value;
+    struct jobject *jobject;
+    unsigned int last = JSON_INVALID;
+  
     ptr++;
     
   nextvalue:
@@ -417,16 +422,16 @@ static char *json_array(struct jhandle *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_value(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_value(struct jhandle *jhandle, char *optr, char *eptr) {
   
-  char *optr = ptr;
+  register char *ptr = optr;
   char *nptr;
 
   ptr = json_whitespace(ptr, eptr);
 
-  nptr = json_string(jhandle, ptr, eptr);
+  nptr = json_number(jhandle, ptr, eptr);
   if (nptr == ptr) {
-    nptr = json_number(jhandle, ptr, eptr);
+    nptr = json_string(jhandle, ptr, eptr);
     if (nptr == ptr) {
       nptr = json_object(jhandle, ptr, eptr);
       if (nptr == ptr) {
@@ -473,8 +478,11 @@ static unsigned char hexdigit[] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-static char *json_hexdigit(char *ptr, char *eptr) {
+static char *json_hexdigit(char *xptr, char *xeptr) {
 
+  register char *ptr  = xptr;
+  register char *eptr = xeptr;
+  
   if ((eptr != ptr) &&
       (hexdigit[(unsigned char)(*ptr)])) {
     ptr++;
@@ -485,13 +493,12 @@ static char *json_hexdigit(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_string(struct jhandle *jhandle, char *optr, char *eptr) {
 
   struct jobject *jobject;
-  char *optr = ptr;
-  char *nptr;
+  register char *ptr = optr;
 
-  if (eptr == ptr) goto fail;  
+  if (eptr == ptr) goto fail;
   if (*ptr == '"') {
     ptr++;
 
@@ -512,6 +519,8 @@ static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
 	goto nextchar;
 
       } else if (*ptr == 'u') {
+
+	char *nptr;
 	ptr++;
 	
 	nptr = json_hexdigit(ptr, eptr);
@@ -548,6 +557,8 @@ static char *json_string(struct jhandle *jhandle, char *ptr, char *eptr) {
       goto success;
     } else {
       ptr++;
+
+      /* Consume character */
       goto nextchar;
     }
   }
@@ -587,8 +598,11 @@ static unsigned char digit[] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-static char *json_digit(char *ptr, char *eptr) {
+static char *json_digit(char *xptr, char *xeptr) {
 
+  register char *ptr  = xptr;
+  register char *eptr = xeptr;
+  
   if ((eptr != ptr) &&
       (digit[(unsigned char)(*ptr)])) {
     ptr++;
@@ -616,17 +630,17 @@ static unsigned char real[] = {
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-static char *json_integer(char *ptr, char *eptr) {
+static char *json_integer(char *optr, char *xeptr) {
 
-  char *optr = ptr;
-  char *nptr;
+  register char *ptr = optr;
+  char *eptr = xeptr;
 
   if ((eptr != ptr) &&
       (real[(unsigned char)(*ptr)])) {
 
     ptr++;
     for (;;) {
-      nptr = json_digit(ptr, eptr);
+      register char *nptr = json_digit(ptr, eptr);
       if (nptr == ptr) {
 	return ptr;
       }
@@ -639,13 +653,14 @@ static char *json_integer(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_fraction(char *ptr, char *eptr) {
+static char *json_fraction(char *optr, char *eptr) {
 
-  char *optr = ptr;
-  char *nptr;
+  register char *ptr = optr;
 
   if (eptr == ptr) goto fail;  
   if (*ptr == '.') {
+
+    char *nptr;
     ptr++;
 
     nptr = json_digit(ptr, eptr);
@@ -671,13 +686,14 @@ static char *json_fraction(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_exponent(char *ptr, char *eptr) {
+static char *json_exponent(char *optr, char *eptr) {
 
-  char *optr = ptr;
-  char *nptr;
+  register char *ptr = optr;
 
   if (eptr == ptr) goto fail;  
   if ((*ptr == 'E') || (*ptr == 'e'))  {
+
+    char *nptr;
     ptr++;
 
     if (eptr == ptr) goto fail;  
@@ -710,10 +726,10 @@ static char *json_exponent(char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_number(struct jhandle *jhandle, char *optr, char *eptr) {
 
   struct jobject *jobject;
-  char *optr = ptr;
+  register char *ptr = optr;
   char *nptr;
 
   if (eptr == ptr) goto fail;  
@@ -751,8 +767,10 @@ static char *json_number(struct jhandle *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_true(struct jhandle *jhandle, char *optr, char *eptr) {
 
+  register char *ptr = optr;
+  
   if (((eptr - ptr) >= 4) &&
       ((ptr[0] == 't') && (ptr[1] == 'r') && 
        (ptr[2] == 'u') && (ptr[3] == 'e'))) {
@@ -768,7 +786,9 @@ static char *json_true(struct jhandle *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_false(struct jhandle *jhandle, char *optr, char *eptr) {
+
+  register char *ptr = optr;
 
   if (((eptr - ptr) >= 5) &&
       ((ptr[0] == 'f') && (ptr[1] == 'a') &&
@@ -786,7 +806,9 @@ static char *json_false(struct jhandle *jhandle, char *ptr, char *eptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *json_null(struct jhandle *jhandle, char *ptr, char *eptr) {
+static char *json_null(struct jhandle *jhandle, char *optr, char *eptr) {
+
+  register char *ptr = optr;
 
   if (((eptr - ptr) >= 4) &&
       ((ptr[0] == 'n') && (ptr[1] == 'u') &&
