@@ -46,17 +46,15 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-#define JSON_OBJECT 1 
-#define JSON_ARRAY  2 
-#define JSON_STRING 3 
-#define JSON_NUMBER 4 
-#define JSON_TRUE   5 
-#define JSON_FALSE  6 
-#define JSON_NULL   7 
+#define JSON_MAXDEPTH 1024         /* Set the maximum depth we will allow
+				    * lists and disctions to descend. */
 
-/* -------------------------------------------------------------------- */
-
-#define JSON_MAXDEPTH 1024
+/* #define BIGJSON */              /* Set string offset to use 'unsigned long',
+				    * on 64 bit platforms this will allow us to 
+				    * index string at offset >4GB Ths downside
+				    * of this is that every jobject will now
+				    * consume 16bytes instead of 12bytes 
+				    */
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -65,6 +63,13 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 struct jobject {
 
+#define JSON_OBJECT 1 
+#define JSON_ARRAY  2 
+#define JSON_STRING 3 
+#define JSON_NUMBER 4 
+#define JSON_TRUE   5 
+#define JSON_FALSE  6 
+#define JSON_NULL   7 
   unsigned int type:3;            /* One of JSON_OBJECT, JSON_ARRAY... */
   unsigned int len:29;            /* Count of ALL children OR length of string
 				   * MAX:2^29-1 (536870911) */
@@ -74,7 +79,13 @@ struct jobject {
     } object;
 
     struct {
-      unsigned int offset;        /* First character Offset from start of JSON buffer */ 
+
+#ifdef BIGJSON
+#define joff_t unsigned long
+#else      
+#define joff_t unsigned int
+#endif
+      joff_t offset;              /* First character Offset from start of JSON buffer */ 
     } string;
 
   } u;
@@ -87,15 +98,16 @@ struct jobject {
 struct jhandle {
 
   unsigned int userbuffer:1;      /* Did user supply the buffer? */
-  int spare:30;
+  unsigned int useljmp:1;         /* We want to longjmp on allocation failure */
+  unsigned int hasdecoded:1;      /* json_decode has run, prevent us from modfying 
+				   * the jobject pool */
+  int spare:29;
 
   void (*onfree)
   (struct jhandle *jhandle);      /* Function to call on freeing */
   
   char         *buf;              /* Unparsed json data */
-  size_t       len;               /* Length of json data */
-  
-  unsigned int useljmp:1;         /* We want to longjmp on allocation failure */
+  size_t       len;               /* Length of json data */  
   jmp_buf      setjmp_ctx;        /* Allows us to return from allocation failure 
 				   * from deeply nested calls */
   
@@ -104,8 +116,8 @@ struct jhandle {
   unsigned int   used;            /* Jobjects in use */
   unsigned int   root;            /* Index of our root object */
 
-  int depth;
-  int max_depth;                  /* RFC 8259 section 9 allows us to set a max depth for
+  int            depth;
+  int            max_depth;       /* RFC 8259 section 9 allows us to set a max depth for
 				   * list and object traversal */
 };
 

@@ -58,13 +58,6 @@ int json_alloc(struct jhandle *jhandle, struct jobject *ptr,
   jhandle->count   = count;
   jhandle->root    = JSON_INVALID;
 
-  /*  
-  jhandle->used       = 0;
-  jhandle->onfree     = (void *)0;
-  jhandle->useljmp    = 0;
-  jhandle->userbuffer = 0;
-  */
-  
   if (ptr) {
     jhandle->userbuffer = (unsigned int)1;
     jhandle->jobject    = ptr;
@@ -99,6 +92,15 @@ int json_decode(struct jhandle *jhandle, char *buf, size_t len) {
 
   struct jobject *object;
 
+#ifndef BIGJSON
+  /* We only support files >4GB if BIGJSON is defined 
+   */
+  if (len >= 0xFFFFFFFF) {
+    errno = EINVAL;
+    return -1;
+  }
+#endif
+
   jhandle->buf = buf;
   jhandle->len = len;
   
@@ -115,6 +117,9 @@ int json_decode(struct jhandle *jhandle, char *buf, size_t len) {
     return -1;
   }
   
+  jhandle->hasdecoded = 1;  /* Prevent user from modifying 
+			     * jobject pool */
+
   if (json_element(jhandle, buf, &buf[len]) == buf) {
 
     errno = EINVAL;

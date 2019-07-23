@@ -49,19 +49,22 @@ static unsigned int json_strdup(struct jhandle *jhandle,
 struct jobject *json_string_new(struct jhandle *jhandle,
 			    char *ptr, int len) {
 
-  unsigned int offset = json_strdup(jhandle, ptr, len);
-  if (offset != (unsigned int)-1) {
-  
-    struct jobject *jobject = jobject_allocate(jhandle, 1);
-    
-    jobject->type            = JSON_STRING;
-    jobject->u.string.offset = offset;
-    jobject->len             = len;
-    jobject->next            = JSON_INVALID;
-    
-    return jobject;
-  }
+  if (!jhandle->hasdecoded) {  
 
+    unsigned int offset = json_strdup(jhandle, ptr, len);
+    if (offset != (unsigned int)-1) {
+  
+      struct jobject *jobject = jobject_allocate(jhandle, 1);
+    
+      jobject->type            = JSON_STRING;
+      jobject->u.string.offset = offset;
+      jobject->len             = len;
+      jobject->next            = JSON_INVALID;
+    
+      return jobject;
+    }
+  }
+  
   return (void *)0;
 }
 
@@ -72,8 +75,8 @@ struct jobject *json_object_add(struct jhandle *jhandle,
 				struct jobject *string,
 				struct jobject *value) {
 
-
-  if (object->type == JSON_OBJECT) {
+  if ((!jhandle->hasdecoded) &&
+      (object->type == JSON_OBJECT)) {
 
     string->next = JOBJECT_OFFSET(jhandle, value);    
     if (object->len == 0) {
@@ -107,99 +110,109 @@ struct jobject *json_object_add(struct jhandle *jhandle,
 /* -------------------------------------------------------------------- */
 struct jobject *json_object_new(struct jhandle *jhandle, ...) {
 
-  struct jobject *object;
-  va_list ap;
+  if (!jhandle->hasdecoded) {  
 
-  unsigned int last  = JSON_INVALID;
-  unsigned int first = JSON_INVALID;
+    struct jobject *object;
+    va_list ap;
 
-  int count = 0;
+    unsigned int last  = JSON_INVALID;
+    unsigned int first = JSON_INVALID;
+
+    int count = 0;
   
-  va_start(ap, jhandle);
+    va_start(ap, jhandle);
 
-  for(;;) {
+    for(;;) {
     
-    struct jobject *string;
-    struct jobject *value;
-    struct jobject *jobject;
+      struct jobject *string;
+      struct jobject *value;
+      struct jobject *jobject;
 
-    string = va_arg(ap, struct jobject *);
-    if (string == (void *)0) {
-      break;
-    }
+      string = va_arg(ap, struct jobject *);
+      if (string == (void *)0) {
+	break;
+      }
 
-    count++;
-    if (last == JSON_INVALID) {
-      first = JOBJECT_OFFSET(jhandle, string);
-      last  = first;
-    } else {
+      count++;
+      if (last == JSON_INVALID) {
+	first = JOBJECT_OFFSET(jhandle, string);
+	last  = first;
+      } else {
+	jobject = JOBJECT_AT(jhandle, last);
+	jobject->next = JOBJECT_OFFSET(jhandle, string);
+	last = jobject->next;
+      }
+
+      value = va_arg(ap, struct jobject *);
+
+      count++;
       jobject = JOBJECT_AT(jhandle, last);
-      jobject->next = JOBJECT_OFFSET(jhandle, string);
+      jobject->next = JOBJECT_OFFSET(jhandle, value);
       last = jobject->next;
     }
 
-    value = va_arg(ap, struct jobject *);
+    va_end(ap);
 
-    count++;
-    jobject = JOBJECT_AT(jhandle, last);
-    jobject->next = JOBJECT_OFFSET(jhandle, value);
-    last = jobject->next;
+    object = jobject_allocate(jhandle, 1);
+
+    object->type           = JSON_OBJECT;
+    object->u.object.child = first;
+    object->len            = count;
+    object->next           = JSON_INVALID;
+
+    return object;
   }
 
-  va_end(ap);
-
-  object = jobject_allocate(jhandle, 1);
-
-  object->type           = JSON_OBJECT;
-  object->u.object.child = first;
-  object->len            = count;
-  object->next           = JSON_INVALID;
-  
-  return object;
+  return (void *)0;  
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *json_array_new(struct jhandle *jhandle, ...) {
 
-  struct jobject *array;
-  va_list ap;
+  if (!jhandle->hasdecoded) {  
 
-  unsigned int last  = JSON_INVALID;
-  unsigned int first = JSON_INVALID;
+    struct jobject *array;
+    va_list ap;
 
-  int count = 0;
+    unsigned int last  = JSON_INVALID;
+    unsigned int first = JSON_INVALID;
+
+    int count = 0;
   
-  va_start(ap, jhandle);
+    va_start(ap, jhandle);
 
-  for(;;) {
+    for(;;) {
     
-    struct jobject *value = va_arg(ap, struct jobject *);
-    if (value == (void *)0) {
-      break;
-    }
+      struct jobject *value = va_arg(ap, struct jobject *);
+      if (value == (void *)0) {
+	break;
+      }
 
-    count++;
-    if (last == JSON_INVALID) {
-      first = JOBJECT_OFFSET(jhandle, value);
-      last  = first;
-    } else {
-      struct jobject *jobject = JOBJECT_AT(jhandle, last);
-      jobject->next = JOBJECT_OFFSET(jhandle, value);
-      last = jobject->next;
+      count++;
+      if (last == JSON_INVALID) {
+	first = JOBJECT_OFFSET(jhandle, value);
+	last  = first;
+      } else {
+	struct jobject *jobject = JOBJECT_AT(jhandle, last);
+	jobject->next = JOBJECT_OFFSET(jhandle, value);
+	last = jobject->next;
+      }
     }
+  
+    va_end(ap);
+
+    array = jobject_allocate(jhandle, 1);
+  
+    array->type           = JSON_ARRAY;
+    array->u.object.child = first;
+    array->len            = count;
+    array->next           = JSON_INVALID;  
+
+    return array;
   }
   
-  va_end(ap);
-
-  array = jobject_allocate(jhandle, 1);
-  
-  array->type           = JSON_ARRAY;
-  array->u.object.child = first;
-  array->len            = count;
-  array->next           = JSON_INVALID;  
-
-  return array;
+  return (void *)0;
 }
 
 /* -------------------------------------------------------------------- */
@@ -208,7 +221,8 @@ struct jobject *json_array_add(struct jhandle *jhandle,
 			       struct jobject *object,
 			       struct jobject *value) {
 
-  if (object->type == JSON_ARRAY) {
+  if ((!jhandle->hasdecoded) &&
+      (object->type == JSON_ARRAY)) {
 
     if (object->len == 0) {
       

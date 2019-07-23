@@ -58,7 +58,14 @@ int json_file_decode(struct jhandle *jhandle, char *pathname) {
   if (fd == -1) goto error1;
 
   if (fstat(fd, &sb) == -1) goto error2;
-        
+
+#ifndef BIGJSON
+  /* We only support files >4GB if BIGJSON Is defined */
+  if (sb.st_size >= 0xFFFFFFFF) {
+    goto error2;
+  }
+#endif
+  
   ptr = (char *)mmap((void *)0, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
   if (ptr == MAP_FAILED) {
     goto error2;
