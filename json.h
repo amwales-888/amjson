@@ -138,7 +138,7 @@ struct jobject *jobject_allocate(struct jhandle *jhandle, int count);
 
 /* json_dump.c -------------------------------------------------------- */
 
-void json_dump(struct jhandle *jhandle, struct jobject *jobject);
+void json_dump(struct jhandle *jhandle, struct jobject *jobject, int pretty);
 
 /* json_file.c -------------------------------------------------------- */
 

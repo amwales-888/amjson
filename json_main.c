@@ -127,12 +127,12 @@ int main(int argc, char **argv) {
 
       if (argc == 3) {  
 	if (strcmp(argv[2],"--dump") == 0) {
-	  json_dump(&jhandle, (void *)0);
+	  json_dump(&jhandle, (void *)0, 1);
 	} else {
 	  char *query = argv[2];
 	  struct jobject *jobject = json_query(&jhandle, JOBJECT_ROOT(&jhandle), query);
 	  if (jobject) {
-	    json_dump(&jhandle, jobject);
+	    json_dump(&jhandle, jobject, 1);
 	  } else {
 	    printf("'%s' not found\n", query);
 	    return 1;

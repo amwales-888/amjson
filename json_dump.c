@@ -31,18 +31,33 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 
 static void dump(struct jhandle *jhandle, struct jobject *jobject,
-		 int type, int count);
+		 int type, int depth, int pretty);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 static void dump(struct jhandle *jhandle, struct jobject *jobject,
-		 int type, int count) {
+		 int type, int depth, int pretty) {
 
   char *sep = "";
+  int i;
+  char *space = "";
+  char *nl = "";
+  
+  if (pretty) {  
+    space = alloca((depth*2)+1);  
+    for (i=0; i<depth*2; i++) {
+      space[i] = ' ';
+    }
+    space[i] = '\0';
+    nl = "\n";
+  }
   
   while (jobject) {
 
     printf("%s", sep);
+    if ((pretty) && (*sep != ':')) {
+      printf(space);
+    }
     
     switch (JOBJECT_TYPE(jobject)) {
 
@@ -53,14 +68,14 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
       printf("%.*s", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
       break;
     case JSON_OBJECT:
-      printf("{");
-      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), JSON_OBJECT, 1);
-      printf("}");
+      printf("{%s",nl);
+      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), JSON_OBJECT, depth+1, pretty);
+      printf("%s%s}", nl, space);
       break;
     case JSON_ARRAY:
-      printf("[");
-      dump(jhandle, ARRAY_FIRST(jhandle, jobject), JSON_ARRAY, 1);
-      printf("]");
+      printf("[%s", nl);
+      dump(jhandle, ARRAY_FIRST(jhandle, jobject), JSON_ARRAY, depth+1, pretty);
+      printf("%s%s]", nl, space);
       break;
     case JSON_TRUE:
       printf("true");
@@ -73,7 +88,7 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
       break;
     }
 
-    if (count == 0) {    
+    if (depth == 0) {    
       jobject = (void *)0;
     } else {
       jobject = JOBJECT_NEXT(jhandle,jobject);
@@ -81,20 +96,28 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
 
     if ((type == JSON_OBJECT) &&
 	((*sep == '\0') || (*sep == ','))) {      
-      sep = ":";      
+      if (pretty) {
+	sep = ": ";
+      } else {
+	sep = ":";
+      }
     } else {
-      sep = ",";
+      if (pretty) {
+	sep = ",\n";
+      } else {
+	sep = ",";
+      }
     }
   }
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-void json_dump(struct jhandle *jhandle, struct jobject *jobject) {
+void json_dump(struct jhandle *jhandle, struct jobject *jobject, int pretty) {
 
   if (!jobject) jobject = JOBJECT_ROOT(jhandle);
   
-  dump(jhandle, jobject, JOBJECT_TYPE(jobject), 0);
+  dump(jhandle, jobject, JOBJECT_TYPE(jobject), 0, pretty);
 
   printf("\n");
 }

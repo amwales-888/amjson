@@ -18,7 +18,7 @@ int main(int argc __attribute__((unused)),
       struct jobject *jobject;
      
       if ((jobject = json_query(&jhandle, JOBJECT_ROOT(&jhandle), "name"))) {
-	json_dump(&jhandle, jobject);
+	json_dump(&jhandle, jobject, 1);
       }
     }
     json_free(&jhandle);

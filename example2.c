@@ -15,7 +15,7 @@ int main(int argc __attribute__((unused)),
   
   if (json_alloc(&jhandle, (void *)0, 32) == 0) {
     if (json_decode(&jhandle, json, strlen(json)) == 0) {
-      json_dump(&jhandle, JOBJECT_ROOT(&jhandle));
+      json_dump(&jhandle, JOBJECT_ROOT(&jhandle), 1);
     }
     json_free(&jhandle);
   }

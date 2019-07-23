@@ -36,10 +36,13 @@ int main(int argc __attribute__((unused)),
     json_array_add(&jhandle,
 		   array, 
 		   json_object_new(&jhandle,
-				   json_string_new(&jhandle, "name", strlen("name")),
-				   json_string_new(&jhandle, "dave", strlen("dave")),
+				   json_string_new(&jhandle, "list", strlen("list")),
+				   json_array_new(&jhandle,
+						  json_string_new(&jhandle, "x", strlen("x")),
+						  json_string_new(&jhandle, "y", strlen("y")),
+						  (void *)0),
 				   (void *)0));    
-    json_dump(&jhandle, array);
+    json_dump(&jhandle, array, 1);
 
     json_free(&jhandle);
   }
