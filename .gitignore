@@ -1,4 +1,13 @@
+# performance datasets
 tests/performance/datasets
+
+# object files
 *.o
+
+# binaries
 json
 tests/performance/genjson
+example1
+example2
+example3
+example4
