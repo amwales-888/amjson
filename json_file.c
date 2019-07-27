@@ -30,56 +30,71 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "json.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-static void munmap_file(struct jhandle *jhandle);
+static void file_munmap(struct jhandle *jhandle);
+static int file_decode(struct jhandle *jhandle, char *pathname);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static void munmap_file(struct jhandle *jhandle) {
+static void file_munmap(struct jhandle *jhandle) {
 
   munmap(jhandle->buf, jhandle->len);
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-int json_file_decode(struct jhandle *jhandle, char *pathname) {
+static int file_decode(struct jhandle *jhandle, char *pathname) {
 
   int         fd;
   struct stat sb;
-  int         result;
+  int         result = -1;
   char        *ptr;
-
+  int         lerrno;
+  
   fd = open(pathname, O_RDONLY);
-  if (fd == -1) goto error1;
+  if (fd == -1) return -1;
 
-  if (fstat(fd, &sb) == -1) goto error2;
+  if (fstat(fd, &sb) == -1) goto error;
 
 #ifndef BIGJSON
   /* We only support files >4GB if BIGJSON Is defined */
-  if (sb.st_size >= 0xFFFFFFFF) {
-    goto error2;
-  }
+  if (sb.st_size >= 0xFFFFFFFF) goto error;
 #endif
   
   ptr = (char *)mmap((void *)0, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
-  if (ptr == MAP_FAILED) {
-    goto error2;
-  }
+  if (ptr == MAP_FAILED) goto error;
 
-  jhandle->onfree = munmap_file;
+  jhandle->onfree = file_munmap;
   
   result = json_decode(jhandle, ptr, sb.st_size);
 
+error:
+  lerrno = errno;
   close(fd);
+  errno = lerrno;
+
   return result;
-error2:
-  close(fd);
-error1:
-  return -1;
 }
 
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+int json_file_decode(struct jhandle *jhandle, char *pathname) {
+
+  if (file_decode(jhandle, pathname) != 0) {
+    if ((errno != EINVAL) &&
+	(errno != ENOMEM)) {
+
+      errno = EIO;
+    }
+
+    return -1;
+  }
+
+  return 0;
+}

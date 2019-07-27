@@ -53,5 +53,35 @@ clean:
 	rm -f json json.o json_util.o json_dump.o json_file.o json_query.o json_mod.o \
               json_main.o example1 example1.o example2 example2.o example3 example3.o example4 example4.o
 
+.PHONY: test
+
+test: json
+	@tests/JSON_checker/run.sh tests/JSON_checker/test ./json
+	@tests/JSONTestSuite/run.sh tests/JSONTestSuite/test_parsing ./json
+
+.PHONY: perf
+
+tests/performance/genjson: tests/performance/genjson.o
+	$(CC) -o $@ $^ $(CFLAGS)
+
+
+tests/performance/datasets:
+	mkdir tests/performance/datasets
+
+tests/performance/datasets/1mb.json: tests/performance/genjson tests/performance/datasets
+	tests/performance/genjson tests/performance/datasets/1mb.json 1M
+
+tests/performance/datasets/50mb.json: tests/performance/genjson tests/performance/datasets
+	tests/performance/genjson tests/performance/datasets/50mb.json 50M
+
+tests/performance/datasets/100mb.json: tests/performance/genjson tests/performance/datasets
+	tests/performance/genjson tests/performance/datasets/100mb.json 100M
+
+tests/performance/datasets/500mb.json: tests/performance/genjson tests/performance/datasets
+	tests/performance/genjson tests/performance/datasets/500mb.json 500M
+
+perf: json tests/performance/genjson tests/performance/datasets/1mb.json tests/performance/datasets/50mb.json tests/performance/datasets/100mb.json tests/performance/datasets/500mb.json
+	@tests/performance/run.sh tests/performance ./json
+
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------

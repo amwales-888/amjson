@@ -71,6 +71,8 @@ struct jobject {
 #define JSON_FALSE  6 
 #define JSON_NULL   7 
   unsigned int type:3;            /* One of JSON_OBJECT, JSON_ARRAY... */
+
+#define JSON_MAXLEN (536870911UL)
   unsigned int len:29;            /* Count of ALL children OR length of string
 				   * MAX:2^29-1 (536870911) */
   union {
@@ -128,13 +130,19 @@ struct jhandle {
 #define JOBJECT_OFFSET(jhandle, o)     ((((char *)(o)) - ((char *)&(jhandle)->jobject[0]))) / sizeof(struct jobject)
 #define JOBJECT_AT(jhandle, offset)    (&(jhandle)->jobject[(offset)])
 
+/* -------------------------------------------------------------------- */
+
+#ifdef __cplusplus
+extern "C" {  
+#endif
+
 /* json.c ------------------------------------------------------------- */
 
 int json_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count);
 void json_free(struct jhandle *jhandle);
 int json_decode(struct jhandle *jhandle, char *buf, size_t len);
 
-struct jobject *jobject_allocate(struct jhandle *jhandle, int count);
+struct jobject *jobject_allocate(struct jhandle *jhandle, unsigned int count);
 
 /* json_dump.c -------------------------------------------------------- */
 
@@ -183,4 +191,9 @@ struct jobject *json_array_add(struct jhandle *jhandle,
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

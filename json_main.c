@@ -29,6 +29,9 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "json.h"
 
@@ -40,12 +43,42 @@ static double tstos(struct timespec* ts) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
+static int local_mkstemp(char *tmpfile) {
+
+  int value = getpid();
+  int len   = strlen(tmpfile);
+  int fd    = -1;
+  
+  while (fd == -1) {
+   
+    sprintf(&tmpfile[len-6], "%.6d", value);
+  
+    do {
+
+      fd = open(tmpfile, O_RDWR|O_CREAT|O_EXCL, 0644);
+    } while ((fd == -1) && (errno == EINTR));
+    
+    if (fd == -1) {
+      if (errno != EEXIST) return -1;
+    }
+    
+    value++;
+    if (value > 999999) {
+      value = 0;
+    }
+  }
+
+  return fd;
+}
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
 static int copy_stdin(char *tmpfile) {
 
   int  fd;
   int  bytes_read;
   
-  fd = mkstemp(tmpfile);
+  fd = local_mkstemp(tmpfile);
   if (fd == -1) return -1;
 
   do {
@@ -92,6 +125,7 @@ int main(int argc, char **argv) {
   struct timespec start;
   struct timespec end;
   double elapsed;
+  
   struct jhandle jhandle;
   char *filepath;
   
@@ -99,23 +133,25 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: %s filepath\n", argv[0]);
     fprintf(stderr, "       %s filepath query\n", argv[0]);
     fprintf(stderr, "       %s filepath --dump\n", argv[0]);
+    fprintf(stderr, "       %s filepath --dump-pretty\n", argv[0]);
     fprintf(stderr, "\n");
-    fprintf(stderr, "filepath - Path to file or '-' to read from stdin\n");
-    fprintf(stderr, "   query - Path to JSON object to display\n");
-    fprintf(stderr, "  --dump - Output JSON representation of data\n");
+    fprintf(stderr, "filepath        - Path to file or '-' to read from stdin\n");
+    fprintf(stderr, "   query        - Path to JSON object to display\n");
+    fprintf(stderr, "  --dump        - Output compact JSON representation of data\n");
+    fprintf(stderr, "  --dump-pretty - Output pretty printed JSON representation of data\n");
     return 1;
   }
 
   filepath = argv[1];
   clock_gettime(CLOCK_MONOTONIC, &start); 
-
+  
   if (json_alloc(&jhandle, (void *)0, 1024 * 1024) == 0) {    
 
     char tmpfile[] = "/tmp/json.XXXXXX";
 
     if (strcmp(filepath, "-") == 0) {
       if (copy_stdin(tmpfile) == -1) {
-	printf("Failed to copy stdin\n");
+	fprintf(stderr, "Failed to copy stdin\n");
 	return 1;					  
       }
 
@@ -123,10 +159,12 @@ int main(int argc, char **argv) {
     }
 
     if (json_file_decode(&jhandle, filepath) == 0) {      
-      printf("JSON valid [%d items]\n", jhandle.used);
+      fprintf(stderr, "JSON valid [%d items]\n", jhandle.used);
 
       if (argc == 3) {  
 	if (strcmp(argv[2],"--dump") == 0) {
+	  json_dump(&jhandle, (void *)0, 0);
+	} else if (strcmp(argv[2],"--dump-pretty") == 0) {
 	  json_dump(&jhandle, (void *)0, 1);
 	} else {
 	  char *query = argv[2];
@@ -134,16 +172,16 @@ int main(int argc, char **argv) {
 	  if (jobject) {
 	    json_dump(&jhandle, jobject, 1);
 	  } else {
-	    printf("'%s' not found\n", query);
+	    fprintf(stderr, "'%s' not found\n", query);
 	    return 1;
 	  }
 	}
       }
     } else {
       if (errno == ENOMEM) {
-	printf("Failed allocating memory\n");
+	fprintf(stderr, "Failed allocating memory\n");
       } else {
-	printf("JSON invalid\n");
+	fprintf(stderr, "JSON invalid\n");
       }      
       return 1;
     }
@@ -155,13 +193,13 @@ int main(int argc, char **argv) {
     }
     
   } else {
-    printf("JSON alloc failed\n");
+    fprintf(stderr, "JSON alloc failed\n");
     return 1;
   }
 
   clock_gettime(CLOCK_MONOTONIC, &end);
   elapsed = tstos(&end) - tstos(&start);
-  printf("Ellapsed time seconds:%f\n", elapsed);
+  fprintf(stderr, "Ellapsed time seconds:%f\n", elapsed);
   
   return 0;
 }

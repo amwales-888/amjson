@@ -13,8 +13,8 @@ int main(int argc __attribute__((unused)),
 	 char **argv __attribute__((unused))) {
 
   struct jhandle jhandle;
-  if (json_alloc(&jhandle, (void *)0, 2) == 0) {
-
+  if (json_alloc(&jhandle, (void *)0, 32) == 0) {
+    
     struct jobject *array;
 
     array = json_array_new(&jhandle,

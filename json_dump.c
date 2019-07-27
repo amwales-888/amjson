@@ -30,33 +30,59 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
+static void dump_spaces(int count);
 static void dump(struct jhandle *jhandle, struct jobject *jobject,
 		 int type, int depth, int pretty);
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+
+#define MAX_SPACECOUNT 3
+
+static char *spaces[] = {
+  "","  ","    ","      ","        ","          ",
+  "            ","              "
+};
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+static void dump_spaces(int depth) {
+
+  if (depth == 0) return;
+  
+  if (depth < MAX_SPACECOUNT) {
+    printf(spaces[depth]);
+  } else {    
+
+    for (;;) {
+
+      printf(spaces[MAX_SPACECOUNT-1]);
+      
+      depth -= MAX_SPACECOUNT-1;
+      if (depth < MAX_SPACECOUNT) break;     
+    }
+
+    dump_spaces(depth);
+  }
+}
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 static void dump(struct jhandle *jhandle, struct jobject *jobject,
 		 int type, int depth, int pretty) {
 
-  char *sep = "";
-  int i;
-  char *space = "";
-  char *nl = "";
+  char *sep   = "";
+  char *nl    = "";
   
-  if (pretty) {  
-    space = alloca((depth*2)+1);  
-    for (i=0; i<depth*2; i++) {
-      space[i] = ' ';
-    }
-    space[i] = '\0';
+  if (pretty) {
     nl = "\n";
   }
   
   while (jobject) {
 
-    printf("%s", sep);
+    printf(sep);
     if ((pretty) && (*sep != ':')) {
-      printf(space);
+      dump_spaces(depth);
     }
     
     switch (JOBJECT_TYPE(jobject)) {
@@ -68,14 +94,20 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
       printf("%.*s", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
       break;
     case JSON_OBJECT:
-      printf("{%s",nl);
+      printf("{");
+      if (pretty) printf(nl);      
       dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), JSON_OBJECT, depth+1, pretty);
-      printf("%s%s}", nl, space);
+      if (pretty) printf(nl);
+      if (pretty) dump_spaces(depth);
+      printf("}");
       break;
     case JSON_ARRAY:
-      printf("[%s", nl);
+      printf("[");
+      if (pretty) printf(nl);
       dump(jhandle, ARRAY_FIRST(jhandle, jobject), JSON_ARRAY, depth+1, pretty);
-      printf("%s%s]", nl, space);
+      printf(nl);
+      if (pretty) dump_spaces(depth);
+      printf("]");
       break;
     case JSON_TRUE:
       printf("true");

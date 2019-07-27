@@ -40,6 +40,9 @@ static unsigned int json_strdup(struct jhandle *jhandle,
 
   char *dptr = (char *)jobject_allocate(jhandle,
 					(len + (sizeof(struct jobject)-1)) / sizeof(struct jobject));
+
+  if (dptr == (void *)0) return -1;
+  
   memcpy(dptr, ptr, len);
   return JOBJECT_OFFSET(jhandle, dptr);
 }
@@ -55,7 +58,8 @@ struct jobject *json_string_new(struct jhandle *jhandle,
     if (offset != (unsigned int)-1) {
   
       struct jobject *jobject = jobject_allocate(jhandle, 1);
-    
+      if (jobject == (void *)0) return (void *)0;
+          
       jobject->type            = JSON_STRING;
       jobject->u.string.offset = offset;
       jobject->len             = len;
@@ -154,6 +158,7 @@ struct jobject *json_object_new(struct jhandle *jhandle, ...) {
     va_end(ap);
 
     object = jobject_allocate(jhandle, 1);
+    if (object == (void *)0) return (void *)0;
 
     object->type           = JSON_OBJECT;
     object->u.object.child = first;
@@ -203,6 +208,7 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
     va_end(ap);
 
     array = jobject_allocate(jhandle, 1);
+    if (array == (void *)0) return (void *)0;
   
     array->type           = JSON_ARRAY;
     array->u.object.child = first;
