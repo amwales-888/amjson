@@ -1,3 +1,4 @@
 tests/performance/datasets
 *.o
 json
+tests/performance/genjson
