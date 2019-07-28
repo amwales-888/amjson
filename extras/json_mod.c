@@ -67,7 +67,7 @@ struct jobject *json_string_new(struct jhandle *jhandle,
           
       jobject->type            = JSON_STRING;
       jobject->u.string.offset = offset;
-      jobject->len             = len;
+      jobject->u.string.len    = len;
       jobject->next            = JSON_INVALID;
     
       return jobject;
@@ -88,7 +88,7 @@ struct jobject *json_object_add(struct jhandle *jhandle,
       (object->type == JSON_OBJECT)) {
 
     string->next = JOBJECT_OFFSET(jhandle, value);    
-    if (object->len == 0) {
+    if (object->u.object.count == 0) {
       
       object->u.object.child = JOBJECT_OFFSET(jhandle, string);
 
@@ -108,7 +108,7 @@ struct jobject *json_object_add(struct jhandle *jhandle,
       jobject->next = JOBJECT_OFFSET(jhandle, string);
     }
 
-    object->len += 2;
+    object->u.object.count += 2;
     return object;
   }
 
@@ -167,7 +167,7 @@ struct jobject *json_object_new(struct jhandle *jhandle, ...) {
 
     object->type           = JSON_OBJECT;
     object->u.object.child = first;
-    object->len            = count;
+    object->u.object.count = count;
     object->next           = JSON_INVALID;
 
     return object;
@@ -217,7 +217,7 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
   
     array->type           = JSON_ARRAY;
     array->u.object.child = first;
-    array->len            = count;
+    array->u.object.count = count;
     array->next           = JSON_INVALID;  
 
     return array;
@@ -235,7 +235,7 @@ struct jobject *json_array_add(struct jhandle *jhandle,
   if ((!jhandle->hasdecoded) &&
       (object->type == JSON_ARRAY)) {
 
-    if (object->len == 0) {
+    if (object->u.object.count == 0) {
       
       object->u.object.child = JOBJECT_OFFSET(jhandle, value);
 
@@ -255,7 +255,7 @@ struct jobject *json_array_add(struct jhandle *jhandle,
       jobject->next = JOBJECT_OFFSET(jhandle, value);
     }
 
-    object->len++;
+    object->u.object.count++;
     return object;
   }
 

@@ -11,3 +11,6 @@ examples/example1
 examples/example2
 examples/example3
 examples/example4
+
+# junk left after running perf
+tests/performance/result

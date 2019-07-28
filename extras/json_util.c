@@ -34,7 +34,7 @@ struct jobject *array_index(struct jhandle *jhandle,
 
   int next; 
 
-  if (index >= array->len) return (void *)0;
+  if (index >= array->u.object.count) return (void *)0;
 
   next = array->u.object.child;
   while (index--) {
@@ -54,14 +54,14 @@ struct jobject *object_find(struct jhandle *jhandle,
 
   int next;
 
-  if (object->len == 0) return (void *)0;
+  if (object->u.object.count == 0) return (void *)0;
 
   next = object->u.object.child;
   do {
 
     struct jobject *jobject = JOBJECT_AT(jhandle, next);
 
-    if ((jobject->len == len) &&
+    if ((jobject->u.string.len == len) &&
 	(memcmp(&jhandle->buf[jobject->u.string.offset],
 		key, len) == 0)) {
       return JOBJECT_AT(jhandle, jobject->next);

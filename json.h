@@ -48,7 +48,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* -------------------------------------------------------------------- */
 
-#define JSON_MAXDEPTH 1024        /* Set the maximum depth we will allow
+#define JSON_MAXDEPTH 64          /* Set the maximum depth we will allow
 				   * lists and disctions to descend. Since we
 				   * use a recursive descent parser this is 
 				   * also affects the maximum stack depth used.
@@ -85,18 +85,9 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-#if (UINT_MAX == 4294967295U)     /* Sizeof unsigned int is 4 bytes */ 
-#define JSON_MAXLEN (536870911UL)
-#elif (UINT_MAX == 65535)         /* Sizeof unsigned int is 2 bytes */
-#define JSON_MAXLEN (8191)
-#elif (UINT_MAX == 255)           /* Sizeof unsigned int is 1 byte  */
-#define JSON_MAXLEN (31)
-#else
-#error "Cannot determine sizeof(unsigned int) on this platform"
-#endif
-
 #ifdef BIGJSON
-typedef unsigned long boff_t;     /* boff_t is used as the offset (pointer) into the JSON Buffer. */
+typedef unsigned long boff_t;     /* boff_t is used as the offset (pointer) 
+                                   * into the JSON Buffer. */
 #else
 typedef unsigned int boff_t;
 #endif
@@ -113,33 +104,33 @@ struct jobject {
 #define JSON_NULL      7 
   unsigned int type:3;            /* One of JSON_OBJECT, JSON_ARRAY... */
 
-#if (UINT_MAX == 4294967295U)
-  unsigned int len:29;            /* Count of ALL children OR length of string */
-#elif (UINT_MAX == 65535)
-  unsigned int len:13;
-#elif (UINT_MAX == 255)
-  unsigned int len:5;
-#endif
+#define JSON_INVALID 0            /* Use as valuie indicating end of list */
 
+#if (UINT_MAX == 4294967295U)
+  unsigned int next:29;           /* Index of next chained jobject, 
+                                   * JSON_INVALID used for end of list */
+#elif (UINT_MAX == 65535)
+  unsigned int next:13;
+#elif (UINT_MAX == 255)
+  unsigned int next:5;
+#else
+#error "Cannot determine sizeof(unsigned int) on this platform"
+#endif
+  
+  
   union {
     struct {
+      unsigned int count;         /* Count of ALL children OR length of string */
       unsigned int child;         /* Index of first child */
     } object;
 
     struct {
-      boff_t offset;              /* First character Offset from start of JSON buffer */ 
+      unsigned int len;           /* Count of ALL children OR length of string */
+      boff_t       offset;        /* First character Offset from start of JSON buffer */ 
     } string;
 
   } u;
 
-  /* TODO - HMMM, have a think, maybe 'next' should be cannibilised of its top
-   * bits, since it is used as an offset into a pool of 12 byte objects
-   * we dont need all the bits.
-   */
-  
-#define JSON_INVALID ((unsigned int)-1)
-  unsigned int next;              /* Index of chained jobject, JSON_INVALID 
-				   * used for end of list */
 } __attribute__((packed));
 
 struct jhandle {
@@ -178,15 +169,15 @@ struct jhandle {
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
 #define JOBJECT_NEXT(jhandle,o)        (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
 #define JOBJECT_TYPE(o)                ((o)->type)
-#define JOBJECT_STRING_LEN(o)          ((o)->len)
+#define JOBJECT_STRING_LEN(o)          ((o)->u.string.len)
 #define JOBJECT_STRING_PTR(jhandle, o) (((jhandle)->buf)?(&((jhandle)->buf[(o)->u.string.offset])):((char *)(&(jhandle)->jobject[(o)->u.string.offset])))
-#define ARRAY_COUNT(o)                 ((o)->len)
-#define ARRAY_FIRST(jhandle, o)        (((o)->len == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define ARRAY_COUNT(o)                 ((o)->u.object.count)
+#define ARRAY_FIRST(jhandle, o)        (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
 #define ARRAY_NEXT(jhandle, o)         (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
-#define OBJECT_COUNT(o)                ((o)->len)
-#define OBJECT_FIRST_KEY(jhandle, o)   (((o)->len == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define OBJECT_COUNT(o)                ((o)->u.object.count)
+#define OBJECT_FIRST_KEY(jhandle, o)   (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
 #define OBJECT_NEXT_KEY(jhandle, o)    (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next))
-#define OBJECT_FIRST_VALUE(jhandle, o) (((o)->len == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
+#define OBJECT_FIRST_VALUE(jhandle, o) (((o)->u.object.count == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
 #define OBJECT_NEXT_VALUE(jhandle, o)  (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next)))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != JSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 

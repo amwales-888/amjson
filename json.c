@@ -144,15 +144,6 @@ int json_decode(struct jhandle * const jhandle, char *buf, size_t len) {
 
   struct jobject *object;
 
-#ifndef BIGJSON
-  /* We only support files >4GB if BIGJSON is defined 
-   */
-  if (len > UINT_MAX) {
-    errno = EINVAL;
-    return -1;
-  }
-#endif
-
   jhandle->buf = buf;
   jhandle->len = len;
   
@@ -305,9 +296,6 @@ static char *json_object(struct jhandle * const jhandle, char * const optr, char
 
     /* Add string to list */
     count++;
-#ifndef BIGJSON
-    if (count > JSON_MAXLEN) goto fail; /* overflow */
-#endif
     
     string = JOBJECT_LAST(jhandle);
     if (last == JSON_INVALID) {
@@ -336,9 +324,6 @@ static char *json_object(struct jhandle * const jhandle, char * const optr, char
 
     /* Add value to list */
     count++;
-#ifndef BIGJSON
-    if (count > JSON_MAXLEN) goto fail; /* overflow */
-#endif
     
     value = JOBJECT_LAST(jhandle);
     jobject = JOBJECT_AT(jhandle, last);
@@ -364,7 +349,7 @@ static char *json_object(struct jhandle * const jhandle, char * const optr, char
   object = jobject_allocate(jhandle, 1);
   
   object->type           = JSON_OBJECT;
-  object->len            = count;
+  object->u.object.count = count;
   object->u.object.child = first;
   object->next           = JSON_INVALID;
 
@@ -423,9 +408,6 @@ static char *json_array(struct jhandle * const jhandle, char * const optr, char 
 
     /* Add value to list */
     count++;
-#ifndef BIGJSON
-    if (count > JSON_MAXLEN) goto fail;
-#endif
     
     value = JOBJECT_LAST(jhandle);
     if (last == JSON_INVALID) {
@@ -456,7 +438,7 @@ static char *json_array(struct jhandle * const jhandle, char * const optr, char 
   array = jobject_allocate(jhandle, 1);
   
   array->type           = JSON_ARRAY;
-  array->len            = count;
+  array->u.object.count = count;
   array->u.object.child = first;
   array->next           = JSON_INVALID;  
   
@@ -511,9 +493,6 @@ static char *json_string(struct jhandle * const jhandle, char * const optr, char
 
   struct jobject *jobject;
   register char *ptr = optr;
-#ifndef BIGJSON
-  unsigned int len;
-#endif
   
   if (eptr == ptr) goto fail;
   if (*ptr == '"') {
@@ -567,19 +546,10 @@ static char *json_string(struct jhandle * const jhandle, char * const optr, char
 
  success:
 
-#ifndef BIGJSON
-  len = (ptr-1) - (optr+1);
-  if (len > JSON_MAXLEN) goto fail; /* overflow */
-#endif
-  
   jobject = jobject_allocate(jhandle, 1);
 
   jobject->type            = JSON_STRING;
-#ifndef BIGJSON
-  jobject->len             = len;
-#else
-  jobject->len             = (ptr-1) - (optr+1);
-#endif
+  jobject->u.string.len    = (ptr-1) - (optr+1);
   jobject->u.string.offset = (optr+1) - jhandle->buf;
   jobject->next            = JSON_INVALID;
   return ptr;
@@ -700,9 +670,6 @@ static char *json_number(struct jhandle * const jhandle, char * const optr, char
 
   struct jobject *jobject;
   register char *ptr = optr;
-#ifndef BIGJSON
-  unsigned int len;
-#endif
   char *nptr;
 
   if (eptr == ptr) goto fail;  
@@ -728,19 +695,10 @@ static char *json_number(struct jhandle * const jhandle, char * const optr, char
   if ((eptr != ptr) &&
       ((*ptr == 'e') || (*ptr == 'E'))) ptr = json_exponent(ptr, eptr);
 
-#ifndef BIGJSON
-  len = ptr - optr;
-  if (len > JSON_MAXLEN) goto fail; /* overflow */
-#endif
-  
   jobject = jobject_allocate(jhandle, 1);
   
   jobject->type            = JSON_NUMBER;
-#ifndef BIGJSON
-  jobject->len             = len;
-#else
-  jobject->len             = ptr - optr;
-#endif
+  jobject->u.string.len    = ptr - optr;
   jobject->u.string.offset = optr - jhandle->buf;
   jobject->next            = JSON_INVALID;
   return ptr;  
