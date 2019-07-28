@@ -147,7 +147,7 @@ int json_decode(struct jhandle * const jhandle, char *buf, size_t len) {
 #ifndef BIGJSON
   /* We only support files >4GB if BIGJSON is defined 
    */
-  if (len >= 0xFFFFFFFF) {
+  if (len > UINT_MAX) {
     errno = EINVAL;
     return -1;
   }
@@ -192,10 +192,13 @@ int json_decode(struct jhandle * const jhandle, char *buf, size_t len) {
 /* -------------------------------------------------------------------- */
 struct jobject *jobject_allocate(struct jhandle * const jhandle, unsigned int count) {
 
-  if (jhandle->used + count < jhandle->count) {
+  unsigned int used = jhandle->used + count;
+  if (used <= jhandle->used) goto error; /* overflow */
+  
+  if (used < jhandle->count) {
 
     struct jobject *jobject = &jhandle->jobject[jhandle->used];
-    jhandle->used += count;
+    jhandle->used = used;
     
     return jobject;
   }
@@ -203,15 +206,19 @@ struct jobject *jobject_allocate(struct jhandle * const jhandle, unsigned int co
   if (!jhandle->userbuffer) {
     
     void *ptr;
+    unsigned int ncount = (jhandle->count * 2) + count;
     
-    jhandle->count = (jhandle->count * 2) + count;
-    ptr = realloc(jhandle->jobject, (jhandle->count * sizeof(struct jobject)));	  
+    if (ncount <= jhandle->count) goto error; /* overflow */
+        
+    ptr = realloc(jhandle->jobject, (ncount * sizeof(struct jobject)));	  
     if (ptr) {
+      jhandle->count   = ncount;
       jhandle->jobject = ptr;
       return jobject_allocate(jhandle, count);
     }
   }
 
+ error:
   if (jhandle->useljmp) {
     /* Jump right back to json_decode() 
      */   

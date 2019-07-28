@@ -44,6 +44,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <setjmp.h>
 #include <sys/types.h>
+#include <limits.h>
 
 /* -------------------------------------------------------------------- *
  * WARNING!!! Assumptions have been made about the current platform.
@@ -86,15 +87,21 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-#ifdef BIGJSON
-typedef unsigned long boff_t;     /* boff_t is used as the offset (pointer) into the JSON Buffer. */
-#else      
-typedef unsigned int boff_t;
+#if (UINT_MAX == 4294967295U)     /* Sizeof unsigned int is 4 bytes */ 
+#define JSON_MAXLEN (536870911UL)
+#elif (UINT_MAX == 65535)         /* Sizeof unsigned int is 2 bytes */
+#define JSON_MAXLEN (8191)
+#elif (UINT_MAX == 255)           /* Sizeof unsigned int is 1 byte  */
+#define JSON_MAXLEN (31)
+#else
+#error "Cannot determine sizeof(unsigned int) on this platform"
 #endif
 
-typedef unsigned int poff_t;      /* poff_t is used as the offset (pointer) into the Jobject Pool. */
-typedef unsigned int jsize_t;     /* jsize_t is used as the length of a String/Number in bytes 
-                                   * OR the number of children in an Object/Array. */
+#ifdef BIGJSON
+typedef unsigned long boff_t;     /* boff_t is used as the offset (pointer) into the JSON Buffer. */
+#else
+typedef unsigned int boff_t;
+#endif
 
 struct jobject {
 
@@ -108,12 +115,17 @@ struct jobject {
 #define JSON_NULL      7 
   unsigned int type:3;            /* One of JSON_OBJECT, JSON_ARRAY... */
 
-#define JSON_MAXLEN (536870911UL)
-  jsize_t len:29;                 /* Count of ALL children OR length of string
-				   * MAX:2^29-1 (536870911) */
+#if (UINT_MAX == 4294967295U)
+  unsigned int len:29;            /* Count of ALL children OR length of string */
+#elif (UINT_MAX == 65535)
+  unsigned int len:13;
+#elif (UINT_MAX == 255)
+  unsigned int len:5;
+#endif
+
   union {
     struct {
-      poff_t child;               /* Index of first child */
+      unsigned int child;         /* Index of first child */
     } object;
 
     struct {
@@ -122,10 +134,10 @@ struct jobject {
 
   } u;
 
-#define JSON_INVALID ((poff_t)-1)
-  poff_t next;                    /* Index of chained jobject, JSON_INVALID 
+#define JSON_INVALID ((unsigned int)-1)
+  unsigned int next;                    /* Index of chained jobject, JSON_INVALID 
 				   * used for end of list */
-};
+} __attribute__((packed));
 
 struct jhandle {
 
@@ -133,8 +145,6 @@ struct jhandle {
   unsigned int useljmp:1;         /* We want to longjmp on allocation failure */
   unsigned int hasdecoded:1;      /* json_decode has run, prevent us from modfying 
 				   * the jobject pool */
-  int spare:29;
-
   void (*onfree)
   (struct jhandle *jhandle);      /* Function to call on freeing */
   
@@ -144,9 +154,9 @@ struct jhandle {
 				   * from deeply nested calls */
   
   struct jobject *jobject;        /* Preallocated jobject pool */
-  jsize_t        count;           /* Size of jobject pool */
-  jsize_t        used;            /* Jobjects in use */
-  poff_t         root;            /* Index of our root object */
+  unsigned int   count;           /* Size of jobject pool */
+  unsigned int   used;            /* Jobjects in use */
+  unsigned int   root;            /* Index of our root object */
 
   int            depth;
   int            max_depth;       /* RFC 8259 section 9 allows us to set a max depth for
