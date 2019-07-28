@@ -46,44 +46,42 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/types.h>
 #include <limits.h>
 
-/* -------------------------------------------------------------------- *
- * WARNING!!! Assumptions have been made about the current platform.
- *            That is the minimum size of an int being 32 bits.
- *            This is intended to be fixed in a future release for 
- *            targeting small memory devices such as microcontrollers.
- * -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
 
-#define JSON_MAXDEPTH 1024         /* Set the maximum depth we will allow
-				    * lists and disctions to descend. Since we
-				    * use a recursive descent parser this is 
-				    * also affects the maximum stack depth used.
-				    * You may lower this number but it will affect 
-				    * the maximum nesting of your JSON objects */
+#define JSON_MAXDEPTH 1024        /* Set the maximum depth we will allow
+				   * lists and disctions to descend. Since we
+				   * use a recursive descent parser this is 
+				   * also affects the maximum stack depth used.
+				   * You may lower this number but it will affect 
+				   * the maximum nesting of your JSON objects */
 
-/* #define BIGJSON */              /* Set string offset to use 'unsigned long',
-				    * on 64 bit platforms this will allow us to 
-				    * index string at offset >4GB Ths downside
-				    * of this is that every jobject will now
-				    * consume 16bytes instead of 12bytes */
+/* #define BIGJSON */             /* Set string offset to use 'unsigned long',
+				   * on 64 bit platforms, this will allow us to 
+				   * index string at offset >4GB The downside
+				   * of this is that every jobject will now
+				   * consume 16bytes instead of 12bytes on a 
+				   * 64 bit platform */
 
 /* -------------------------------------------------------------------- *
 
-   Jobject Pool                This is a collection equal sized structures.
+   Jobject Pool                This is a collection of equal sized structures.
    +----+----+----+----+----+  They are chained via a next (offset).
    |    |    |    |    |    |  The Jobject pool is either unmanaged, that is 
    +---|+-^-|+-^--+----+----+  allocated by the user OR maneged, that is 
-       |  | |  |               automaticaly managed by the system.
-       +--+ +--+
-
+       |  | |  |               automaticaly managed by the system. An 
+       +--+ +--+               unmanaged pool will return ENOMEM in errno 
+                               if it becomes full. A managed pool will be
+			       reallocated, if there is no available memory
+			       to reallocate ENOMEM will be returned in errno.
 
    JSON Buffer                 This is a collection of bytes that contains
-   +---------------+           the JSON data that is to be parsed.
-   |{ "key": 1234 }|           The JSON buffer is never modified but MUST
-   +---------------+           remain accessible to the system once parsed.
-                               This is because the system generates references
-                               into the JSON Buffer as it is parsed. After
-                               The call to json_free() the buffer is no longer 
-                               required.
+   +---------------+           the JSON data that is to be parsed after the 
+   |{ "key": 1234 }|           call to json_decode() The JSON buffer is never 
+   +---------------+           modified but MUST remain accessible to the 
+                               system once parsed. This is because the system 
+                               generates references into the JSON Buffer as 
+                               it is parsed. After The call to json_free() 
+                               the buffer is no longer required.
 
  * -------------------------------------------------------------------- */
 
@@ -134,8 +132,13 @@ struct jobject {
 
   } u;
 
+  /* TODO - HMMM, have a think, maybe 'next' should be cannibilised of its top
+   * bits, since it is used as an offset into a pool of 12 byte objects
+   * we dont need all the bits.
+   */
+  
 #define JSON_INVALID ((unsigned int)-1)
-  unsigned int next;                    /* Index of chained jobject, JSON_INVALID 
+  unsigned int next;              /* Index of chained jobject, JSON_INVALID 
 				   * used for end of list */
 } __attribute__((packed));
 
