@@ -26,6 +26,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdio.h>
 
 #include "json.h"
+#include "json_dump.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

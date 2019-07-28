@@ -34,6 +34,9 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <fcntl.h>
 
 #include "json.h"
+#include "json_file.h"
+#include "json_dump.h"
+#include "json_query.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
