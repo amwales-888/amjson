@@ -27,6 +27,11 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdarg.h>
 
 #include "json.h"
+#include "json_mod.h"
+
+/* -------------------------------------------------------------------- */
+
+extern struct jobject *jobject_allocate(struct jhandle *jhandle, unsigned int count);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

@@ -24,6 +24,8 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * -------------------------------------------------------------------- */
 
 #include "json.h"
+#include "json_query.h"
+#include "json_util.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -82,66 +84,6 @@ static char *query_identifier(char *ptr) {
   }
       
   return ptr;
-}
-
-/* -------------------------------------------------------------------- */
-/* -------------------------------------------------------------------- */
-struct jobject *json_queryXXX(struct jhandle *jhandle,
-			     struct jobject *jobject, char *ptr) {  
-  char *nptr;
-
-  nptr = query_identifier(ptr);
-  if (nptr == ptr) {
-    goto fail;
-  } else {
-    jobject = object_find(jhandle, jobject, ptr, (nptr - ptr));
-    if (!jobject) goto fail;    
-  }
-  ptr = nptr;
-
-  if (*ptr == '\0') goto success;
-  
-  for (;;) {
-  
-    nptr = query_index(ptr);
-    if (nptr == ptr) {    
-      nptr = query_identifier(ptr);
-      if (nptr == ptr) {
-	goto fail;
-      } else {
-
-	if (JOBJECT_TYPE(jobject) != JSON_OBJECT) goto fail;       	
-	jobject = object_find(jhandle, jobject, ptr, (nptr - ptr));
-	if (!jobject) goto fail;    
-      }
-    } else {
-      int index = 0;
-      
-      if (JOBJECT_TYPE(jobject) != JSON_ARRAY) goto fail;       	
-
-      ptr++; /* '[' */     
-      while (ptr != (nptr-1)) {
-	index *= 10;
-	index += *ptr - '0';
-	ptr++;
-      }
-
-      ptr++; /* ']' */     
-      if ((*ptr != '\0') &&
-	  (*ptr != '.')) goto fail;  
-      
-      jobject = array_index(jhandle, jobject, index);
-      if (!jobject) goto fail;    
-    }
-    ptr = nptr;
-    
-    if (*ptr == '\0') goto success;
-  }
-
- success:
-  return jobject;
- fail:
-  return (void *)0;
 }
 
 /* -------------------------------------------------------------------- */

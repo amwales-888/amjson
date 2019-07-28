@@ -33,6 +33,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <errno.h>
 
 #include "json.h"
+#include "json_file.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

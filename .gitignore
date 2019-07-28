@@ -7,7 +7,7 @@ tests/performance/datasets
 # binaries
 json
 tests/performance/genjson
-example1
-example2
-example3
-example4
+examples/example1
+examples/example2
+examples/example3
+examples/example4

@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------- *
 
-Copyright 2012 Angelo Masci
+Copyright 2019 Angelo Masci
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the 
@@ -33,6 +33,8 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * 
  * This library is usable with just 2 files being required json.h and 
  * json.c ALL other files are optional.
+ * See the extras directory for additional features, including dumping,
+ * pretty printing, object queries and JSON DOM creation.
  */
 
 #ifndef _JSON_H_
@@ -43,57 +45,85 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <setjmp.h>
 #include <sys/types.h>
 
-/* -------------------------------------------------------------------- */
-/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- *
+ * WARNING!!! Assumptions have been made about the current platform.
+ *            That is the minimum size of an int being 32 bits.
+ *            This is intended to be fixed in a future release for 
+ *            targeting small memory devices such as microcontrollers.
+ * -------------------------------------------------------------------- */
 
 #define JSON_MAXDEPTH 1024         /* Set the maximum depth we will allow
-				    * lists and disctions to descend. */
+				    * lists and disctions to descend. Since we
+				    * use a recursive descent parser this is 
+				    * also affects the maximum stack depth used.
+				    * You may lower this number but it will affect 
+				    * the maximum nesting of your JSON objects */
 
 /* #define BIGJSON */              /* Set string offset to use 'unsigned long',
 				    * on 64 bit platforms this will allow us to 
 				    * index string at offset >4GB Ths downside
 				    * of this is that every jobject will now
-				    * consume 16bytes instead of 12bytes 
-				    */
+				    * consume 16bytes instead of 12bytes */
 
-/* -------------------------------------------------------------------- */
-/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- *
 
-/* All next/child values are offsets not pointers.
- */
+   Jobject Pool                This is a collection equal sized structures.
+   +----+----+----+----+----+  They are chained via a next (offset).
+   |    |    |    |    |    |  The Jobject pool is either unmanaged, that is 
+   +---|+-^-|+-^--+----+----+  allocated by the user OR maneged, that is 
+       |  | |  |               automaticaly managed by the system.
+       +--+ +--+
+
+
+   JSON Buffer                 This is a collection of bytes that contains
+   +---------------+           the JSON data that is to be parsed.
+   |{ "key": 1234 }|           The JSON buffer is never modified but MUST
+   +---------------+           remain accessible to the system once parsed.
+                               This is because the system generates references
+                               into the JSON Buffer as it is parsed. After
+                               The call to json_free() the buffer is no longer 
+                               required.
+
+ * -------------------------------------------------------------------- */
+
+#ifdef BIGJSON
+typedef unsigned long boff_t;     /* boff_t is used as the offset (pointer) into the JSON Buffer. */
+#else      
+typedef unsigned int boff_t;
+#endif
+
+typedef unsigned int poff_t;      /* poff_t is used as the offset (pointer) into the Jobject Pool. */
+typedef unsigned int jsize_t;     /* jsize_t is used as the length of a String/Number in bytes 
+                                   * OR the number of children in an Object/Array. */
+
 struct jobject {
 
-#define JSON_OBJECT 1 
-#define JSON_ARRAY  2 
-#define JSON_STRING 3 
-#define JSON_NUMBER 4 
-#define JSON_TRUE   5 
-#define JSON_FALSE  6 
-#define JSON_NULL   7 
+#define JSON_UNDEFINED 0 
+#define JSON_OBJECT    1
+#define JSON_ARRAY     2 
+#define JSON_STRING    3 
+#define JSON_NUMBER    4 
+#define JSON_TRUE      5 
+#define JSON_FALSE     6 
+#define JSON_NULL      7 
   unsigned int type:3;            /* One of JSON_OBJECT, JSON_ARRAY... */
 
 #define JSON_MAXLEN (536870911UL)
-  unsigned int len:29;            /* Count of ALL children OR length of string
+  jsize_t len:29;                 /* Count of ALL children OR length of string
 				   * MAX:2^29-1 (536870911) */
   union {
     struct {
-      unsigned int child;         /* Index of first child */
+      poff_t child;               /* Index of first child */
     } object;
 
     struct {
-
-#ifdef BIGJSON
-#define joff_t unsigned long
-#else      
-#define joff_t unsigned int
-#endif
-      joff_t offset;              /* First character Offset from start of JSON buffer */ 
+      boff_t offset;              /* First character Offset from start of JSON buffer */ 
     } string;
 
   } u;
 
-#define JSON_INVALID ((unsigned int)-1)
-  unsigned int next;              /* Index of chained jobject, JSON_INVALID 
+#define JSON_INVALID ((poff_t)-1)
+  poff_t next;                    /* Index of chained jobject, JSON_INVALID 
 				   * used for end of list */
 };
 
@@ -114,9 +144,9 @@ struct jhandle {
 				   * from deeply nested calls */
   
   struct jobject *jobject;        /* Preallocated jobject pool */
-  unsigned int   count;           /* Size of jobject pool */
-  unsigned int   used;            /* Jobjects in use */
-  unsigned int   root;            /* Index of our root object */
+  jsize_t        count;           /* Size of jobject pool */
+  jsize_t        used;            /* Jobjects in use */
+  poff_t         root;            /* Index of our root object */
 
   int            depth;
   int            max_depth;       /* RFC 8259 section 9 allows us to set a max depth for
@@ -131,32 +161,6 @@ struct jhandle {
 #define JOBJECT_AT(jhandle, offset)    (&(jhandle)->jobject[(offset)])
 
 /* -------------------------------------------------------------------- */
-
-#ifdef __cplusplus
-extern "C" {  
-#endif
-
-/* json.c ------------------------------------------------------------- */
-
-int json_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count);
-void json_free(struct jhandle *jhandle);
-int json_decode(struct jhandle *jhandle, char *buf, size_t len);
-
-struct jobject *jobject_allocate(struct jhandle *jhandle, unsigned int count);
-
-/* json_dump.c -------------------------------------------------------- */
-
-void json_dump(struct jhandle *jhandle, struct jobject *jobject, int pretty);
-
-/* json_file.c -------------------------------------------------------- */
-
-int json_file_decode(struct jhandle *jhandle, char *pathname);
-
-/* json_query.c ------------------------------------------------------- */
-
-struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, char *ptr);
-
-/* json_util.c -------------------------------------------------------- */
 
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
 #define JOBJECT_NEXT(jhandle,o)        (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
@@ -173,21 +177,17 @@ struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, cha
 #define OBJECT_NEXT_VALUE(jhandle, o)  (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next)))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != JSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
-struct jobject *array_index(struct jhandle *jhandle, struct jobject *array, unsigned int index);
-struct jobject *object_find(struct jhandle *jhandle, struct jobject *object, char *key, unsigned int len);
+/* -------------------------------------------------------------------- */
 
-/* json_mod.c -------------------------------------------------------- */
+#ifdef __cplusplus
+extern "C" {  
+#endif
 
-struct jobject *json_string_new(struct jhandle *jhandle, char *ptr, int len);
-struct jobject *json_object_add(struct jhandle *jhandle,
-				struct jobject *object,
-				struct jobject *string,
-				struct jobject *value);
-struct jobject *json_object_new(struct jhandle *jhandle, ...);
-struct jobject *json_array_new(struct jhandle *jhandle, ...);
-struct jobject *json_array_add(struct jhandle *jhandle,
-			       struct jobject *array,
-			       struct jobject *value);
+/* -------------------------------------------------------------------- */
+
+int json_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count);
+void json_free(struct jhandle *jhandle);
+int json_decode(struct jhandle *jhandle, char *buf, size_t len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
