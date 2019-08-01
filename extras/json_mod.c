@@ -31,22 +31,21 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* -------------------------------------------------------------------- */
 
-extern struct jobject *jobject_allocate(struct jhandle *jhandle, unsigned int count);
+extern struct jobject *jobject_allocate(struct jhandle *jhandle, joff_t count);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-static unsigned int json_strdup(struct jhandle *jhandle, char *ptr, int len);
+static joff_t json_strdup(struct jhandle *jhandle, char *ptr, jsize_t len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static unsigned int json_strdup(struct jhandle *jhandle,
-				char *ptr, int len) {
+static joff_t json_strdup(struct jhandle *jhandle, char *ptr, jsize_t len) {
 
   char *dptr = (char *)jobject_allocate(jhandle,
 					(len + (sizeof(struct jobject)-1)) / sizeof(struct jobject));
 
-  if (dptr == (void *)0) return -1;
+  if (dptr == (void *)0) return (joff_t)-1;
   
   memcpy(dptr, ptr, len);
   return JOBJECT_OFFSET(jhandle, dptr);
@@ -55,20 +54,19 @@ static unsigned int json_strdup(struct jhandle *jhandle,
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *json_string_new(struct jhandle *jhandle,
-			    char *ptr, int len) {
+			    char *ptr, jsize_t len) {
 
   if (!jhandle->hasdecoded) {  
 
-    unsigned int offset = json_strdup(jhandle, ptr, len);
-    if (offset != (unsigned int)-1) {
+    joff_t offset = json_strdup(jhandle, ptr, len);
+    if (offset != (joff_t)-1) {
   
       struct jobject *jobject = jobject_allocate(jhandle, 1);
       if (jobject == (void *)0) return (void *)0;
 
-      jobject->bnext           = JSON_STRING << JSON_NEXTBITS;
+      jobject->blen            = len | (JSON_STRING << JSON_LENBITS);
+      jobject->next            = JSON_INVALID;
       jobject->u.string.offset = offset;
-      jobject->u.string.len    = len;
-    
       return jobject;
     }
   }
@@ -84,33 +82,31 @@ struct jobject *json_object_add(struct jhandle *jhandle,
 				struct jobject *value) {
 
   if ((!jhandle->hasdecoded) &&
-      ((object->bnext >> JSON_NEXTBITS) == JSON_OBJECT)) {
+      (JOBJECT_TYPE(object) == JSON_OBJECT)) {
 
-    string->bnext = ((string->bnext & JSON_TYPEMASK) |
-		     (JOBJECT_OFFSET(jhandle, value)));
+    string->next = JOBJECT_OFFSET(jhandle, value);
 
-    if (object->u.object.count == 0) {
+    if (OBJECT_COUNT(object) == 0) {
       
       object->u.object.child = JOBJECT_OFFSET(jhandle, string);
 
     } else {
 
       struct jobject *jobject;
-      unsigned int next = object->u.object.child;
+      joff_t next = object->u.object.child;
       
       for (;;) {
 
 	jobject = JOBJECT_AT(jhandle, next);
-	if ((jobject->bnext & JSON_NEXTMASK) == JSON_INVALID) break;
+	if (jobject->next == JSON_INVALID) break;
 	
-	next = jobject->bnext & JSON_NEXTMASK;	
+	next = jobject->next;
       }
 
-      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
-			(JOBJECT_OFFSET(jhandle, string)));
+      jobject->next = JOBJECT_OFFSET(jhandle, string);
     }
-
-    object->u.object.count += 2;
+    
+    object->blen = (OBJECT_COUNT(object) + 2) | (JSON_OBJECT << JSON_LENBITS);
     return object;
   }
 
@@ -126,10 +122,10 @@ struct jobject *json_object_new(struct jhandle *jhandle, ...) {
     struct jobject *object;
     va_list ap;
 
-    unsigned int last  = JSON_INVALID;
-    unsigned int first = JSON_INVALID;
+    joff_t last  = JSON_INVALID;
+    joff_t first = JSON_INVALID;
 
-    int count = 0;
+    jsize_t count = 0;
   
     va_start(ap, jhandle);
 
@@ -150,22 +146,16 @@ struct jobject *json_object_new(struct jhandle *jhandle, ...) {
 	last  = first;
       } else {
 	jobject = JOBJECT_AT(jhandle, last);
-
-	jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
-			  (JOBJECT_OFFSET(jhandle, string)));
-
-	last = jobject->bnext & JSON_NEXTMASK;
+	jobject->next = JOBJECT_OFFSET(jhandle, string);
+	last = jobject->next;
       }
 
       value = va_arg(ap, struct jobject *);
 
       count++;
       jobject = JOBJECT_AT(jhandle, last);
-
-      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
-			(JOBJECT_OFFSET(jhandle, value)));
-
-      last = jobject->bnext & JSON_NEXTMASK;
+      jobject->next = JOBJECT_OFFSET(jhandle, value);
+      last = jobject->next;
     }
 
     va_end(ap);
@@ -173,10 +163,9 @@ struct jobject *json_object_new(struct jhandle *jhandle, ...) {
     object = jobject_allocate(jhandle, 1);
     if (object == (void *)0) return (void *)0;
 
-    object->bnext          = JSON_OBJECT << JSON_NEXTBITS;
+    object->blen           = count | (JSON_OBJECT << JSON_LENBITS);
+    object->next           = JSON_INVALID;
     object->u.object.child = first;
-    object->u.object.count = count;
-
     return object;
   }
 
@@ -192,10 +181,10 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
     struct jobject *array;
     va_list ap;
 
-    unsigned int last  = JSON_INVALID;
-    unsigned int first = JSON_INVALID;
+    joff_t last  = JSON_INVALID;
+    joff_t first = JSON_INVALID;
 
-    int count = 0;
+    jsize_t count = 0;
   
     va_start(ap, jhandle);
 
@@ -213,10 +202,8 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
       } else {
 	struct jobject *jobject = JOBJECT_AT(jhandle, last);
 
-	jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
-			  (JOBJECT_OFFSET(jhandle, value)));
-
-	last = jobject->bnext & JSON_NEXTMASK;
+	jobject->next = JOBJECT_OFFSET(jhandle, value);
+	last = jobject->next;
       }
     }
   
@@ -225,10 +212,9 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
     array = jobject_allocate(jhandle, 1);
     if (array == (void *)0) return (void *)0;
 
-    array->bnext          = JSON_ARRAY << JSON_NEXTBITS;
+    array->blen           = count | (JSON_ARRAY << JSON_LENBITS);
+    array->next           = JSON_INVALID;
     array->u.object.child = first;
-    array->u.object.count = count;
-
     return array;
   }
   
@@ -238,35 +224,34 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *json_array_add(struct jhandle *jhandle,
-			       struct jobject *object,
+			       struct jobject *array,
 			       struct jobject *value) {
 
   if ((!jhandle->hasdecoded) &&
-      ((object->bnext >> JSON_NEXTBITS) == JSON_ARRAY)) {
+      (JOBJECT_TYPE(array) == JSON_ARRAY)) {
 
-    if (object->u.object.count == 0) {
+    if (ARRAY_COUNT(array) == 0) {
       
-      object->u.object.child = JOBJECT_OFFSET(jhandle, value);
+      array->u.object.child = JOBJECT_OFFSET(jhandle, value);
 
     } else {
 
       struct jobject *jobject;
-      unsigned int next = object->u.object.child;
+      joff_t next = array->u.object.child;
       
       for (;;) {
 
 	jobject = JOBJECT_AT(jhandle, next);
-	if ((jobject->bnext & JSON_NEXTMASK) == JSON_INVALID) break;
+	if (jobject->next == JSON_INVALID) break;
 	
-	next = jobject->bnext & JSON_NEXTMASK;	
+	next = jobject->next;
       }
       
-      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
-			(JOBJECT_OFFSET(jhandle, value)));
+      jobject->next = JOBJECT_OFFSET(jhandle, value);
     }
 
-    object->u.object.count++;
-    return object;
+    array->blen = (ARRAY_COUNT(array) + 1) | (JSON_ARRAY << JSON_LENBITS);
+    return array;
   }
 
   return (void *)0;

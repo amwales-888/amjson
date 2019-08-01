@@ -48,7 +48,7 @@ extern "C" {
 
 /* -------------------------------------------------------------------- */
 
-struct jobject *json_string_new(struct jhandle *jhandle, char *ptr, int len);
+struct jobject *json_string_new(struct jhandle *jhandle, char *ptr, jsize_t len);
 struct jobject *json_object_add(struct jhandle *jhandle,
 				struct jobject *object,
 				struct jobject *string,

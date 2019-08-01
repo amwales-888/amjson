@@ -30,16 +30,16 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *array_index(struct jhandle *jhandle,
-			      struct jobject *array, unsigned int index) {
+			    struct jobject *array, unsigned int index) {
 
-  int next; 
+  joff_t next; 
 
-  if (index >= array->u.object.count) return (void *)0;
+  if (index >= ARRAY_COUNT(array)) return (void *)0;
 
   next = array->u.object.child;
   while (index--) {
     struct jobject *jobject = JOBJECT_AT(jhandle, next);
-    next = jobject->bnext & JSON_NEXTMASK;    
+    next = jobject->next;    
   }
 
   return JOBJECT_AT(jhandle, next);
@@ -50,27 +50,27 @@ struct jobject *array_index(struct jhandle *jhandle,
 struct jobject *object_find(struct jhandle *jhandle,
 			    struct jobject *object,
 			    char *key,
-			    unsigned int len) {
+			    jsize_t len) {
+  
+  joff_t next;
 
-  int next;
-
-  if (object->u.object.count == 0) return (void *)0;
+  if (OBJECT_COUNT(object) == 0) return (void *)0;
 
   next = object->u.object.child;
   do {
 
     struct jobject *jobject = JOBJECT_AT(jhandle, next);
 
-    if ((jobject->u.string.len == len) &&
+    if ((JOBJECT_STRING_LEN(jobject) == len) &&
 	(memcmp(&jhandle->buf[jobject->u.string.offset],
 		key, len) == 0)) {
-      return JOBJECT_AT(jhandle, jobject->bnext & JSON_NEXTMASK);
+      return JOBJECT_AT(jhandle, jobject->next);
     }
 
-    jobject = JOBJECT_AT(jhandle, jobject->bnext & JSON_NEXTMASK);
-    next = jobject->bnext & JSON_NEXTMASK;
+    jobject = JOBJECT_AT(jhandle, jobject->next);
+    next = jobject->next;
         
-  } while (next != -1);
+  } while (next != JSON_INVALID);
   
   return (void *)0;
 }

@@ -48,8 +48,8 @@ extern "C" {
 
 /* -------------------------------------------------------------------- */
 
-struct jobject *array_index(struct jhandle *jhandle, struct jobject *array, unsigned int index);
-struct jobject *object_find(struct jhandle *jhandle, struct jobject *object, char *key, unsigned int len);
+struct jobject *array_index(struct jhandle *jhandle, struct jobject *array, joff_t index);
+struct jobject *object_find(struct jhandle *jhandle, struct jobject *object, char *key, jsize_t len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
