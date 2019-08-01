@@ -64,11 +64,10 @@ struct jobject *json_string_new(struct jhandle *jhandle,
   
       struct jobject *jobject = jobject_allocate(jhandle, 1);
       if (jobject == (void *)0) return (void *)0;
-          
-      jobject->type            = JSON_STRING;
+
+      jobject->bnext           = JSON_STRING << JSON_NEXTBITS;
       jobject->u.string.offset = offset;
       jobject->u.string.len    = len;
-      jobject->next            = JSON_INVALID;
     
       return jobject;
     }
@@ -85,9 +84,11 @@ struct jobject *json_object_add(struct jhandle *jhandle,
 				struct jobject *value) {
 
   if ((!jhandle->hasdecoded) &&
-      (object->type == JSON_OBJECT)) {
+      ((object->bnext >> JSON_NEXTBITS) == JSON_OBJECT)) {
 
-    string->next = JOBJECT_OFFSET(jhandle, value);    
+    string->bnext = ((string->bnext & JSON_TYPEMASK) |
+		     (JOBJECT_OFFSET(jhandle, value)));
+
     if (object->u.object.count == 0) {
       
       object->u.object.child = JOBJECT_OFFSET(jhandle, string);
@@ -100,12 +101,13 @@ struct jobject *json_object_add(struct jhandle *jhandle,
       for (;;) {
 
 	jobject = JOBJECT_AT(jhandle, next);
-	if (jobject->next == JSON_INVALID) break;
+	if ((jobject->bnext & JSON_NEXTMASK) == JSON_INVALID) break;
 	
-	next = jobject->next;	
+	next = jobject->bnext & JSON_NEXTMASK;	
       }
 
-      jobject->next = JOBJECT_OFFSET(jhandle, string);
+      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+			(JOBJECT_OFFSET(jhandle, string)));
     }
 
     object->u.object.count += 2;
@@ -148,16 +150,22 @@ struct jobject *json_object_new(struct jhandle *jhandle, ...) {
 	last  = first;
       } else {
 	jobject = JOBJECT_AT(jhandle, last);
-	jobject->next = JOBJECT_OFFSET(jhandle, string);
-	last = jobject->next;
+
+	jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+			  (JOBJECT_OFFSET(jhandle, string)));
+
+	last = jobject->bnext & JSON_NEXTMASK;
       }
 
       value = va_arg(ap, struct jobject *);
 
       count++;
       jobject = JOBJECT_AT(jhandle, last);
-      jobject->next = JOBJECT_OFFSET(jhandle, value);
-      last = jobject->next;
+
+      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+			(JOBJECT_OFFSET(jhandle, value)));
+
+      last = jobject->bnext & JSON_NEXTMASK;
     }
 
     va_end(ap);
@@ -165,10 +173,9 @@ struct jobject *json_object_new(struct jhandle *jhandle, ...) {
     object = jobject_allocate(jhandle, 1);
     if (object == (void *)0) return (void *)0;
 
-    object->type           = JSON_OBJECT;
+    object->bnext          = JSON_OBJECT << JSON_NEXTBITS;
     object->u.object.child = first;
     object->u.object.count = count;
-    object->next           = JSON_INVALID;
 
     return object;
   }
@@ -205,8 +212,11 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
 	last  = first;
       } else {
 	struct jobject *jobject = JOBJECT_AT(jhandle, last);
-	jobject->next = JOBJECT_OFFSET(jhandle, value);
-	last = jobject->next;
+
+	jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+			  (JOBJECT_OFFSET(jhandle, value)));
+
+	last = jobject->bnext & JSON_NEXTMASK;
       }
     }
   
@@ -214,11 +224,10 @@ struct jobject *json_array_new(struct jhandle *jhandle, ...) {
 
     array = jobject_allocate(jhandle, 1);
     if (array == (void *)0) return (void *)0;
-  
-    array->type           = JSON_ARRAY;
+
+    array->bnext          = JSON_ARRAY << JSON_NEXTBITS;
     array->u.object.child = first;
     array->u.object.count = count;
-    array->next           = JSON_INVALID;  
 
     return array;
   }
@@ -233,7 +242,7 @@ struct jobject *json_array_add(struct jhandle *jhandle,
 			       struct jobject *value) {
 
   if ((!jhandle->hasdecoded) &&
-      (object->type == JSON_ARRAY)) {
+      ((object->bnext >> JSON_NEXTBITS) == JSON_ARRAY)) {
 
     if (object->u.object.count == 0) {
       
@@ -247,12 +256,13 @@ struct jobject *json_array_add(struct jhandle *jhandle,
       for (;;) {
 
 	jobject = JOBJECT_AT(jhandle, next);
-	if (jobject->next == JSON_INVALID) break;
+	if ((jobject->bnext & JSON_NEXTMASK) == JSON_INVALID) break;
 	
-	next = jobject->next;	
+	next = jobject->bnext & JSON_NEXTMASK;	
       }
-
-      jobject->next = JOBJECT_OFFSET(jhandle, value);
+      
+      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+			(JOBJECT_OFFSET(jhandle, value)));
     }
 
     object->u.object.count++;

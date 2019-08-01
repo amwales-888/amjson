@@ -183,7 +183,10 @@ int json_decode(struct jhandle * const jhandle, char *buf, size_t len) {
 /* -------------------------------------------------------------------- */
 struct jobject *jobject_allocate(struct jhandle * const jhandle, unsigned int count) {
 
-  unsigned int used = jhandle->used + count;
+  unsigned int used = (jhandle->used + count) & JSON_NEXTMASK;
+
+  printf("Allocate %d\n", count);
+  
   if (used <= jhandle->used) goto error; /* overflow */
   
   if (used < jhandle->count) {
@@ -210,6 +213,9 @@ struct jobject *jobject_allocate(struct jhandle * const jhandle, unsigned int co
   }
 
  error:
+
+  printf("Allocation failed\n");
+
   if (jhandle->useljmp) {
     /* Jump right back to json_decode() 
      */   
@@ -303,8 +309,9 @@ static char *json_object(struct jhandle * const jhandle, char * const optr, char
       last  = first;
     } else {
       jobject = JOBJECT_AT(jhandle, last);
-      jobject->next = JOBJECT_OFFSET(jhandle, string);
-      last = jobject->next;
+      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+			(JOBJECT_OFFSET(jhandle, string)));
+      last = jobject->bnext & JSON_NEXTMASK;
     }
     /* String added */
         
@@ -327,8 +334,9 @@ static char *json_object(struct jhandle * const jhandle, char * const optr, char
     
     value = JOBJECT_LAST(jhandle);
     jobject = JOBJECT_AT(jhandle, last);
-    jobject->next = JOBJECT_OFFSET(jhandle, value);
-    last = jobject->next;
+    jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+		      (JOBJECT_OFFSET(jhandle, value)));
+    last = jobject->bnext & JSON_NEXTMASK;
     /* Value added */
     
     if (eptr == ptr) goto fail;  
@@ -348,10 +356,9 @@ static char *json_object(struct jhandle * const jhandle, char * const optr, char
   
   object = jobject_allocate(jhandle, 1);
   
-  object->type           = JSON_OBJECT;
+  object->bnext          = JSON_OBJECT << JSON_NEXTBITS; /* next offset is JSON_INVALID */
   object->u.object.count = count;
   object->u.object.child = first;
-  object->next           = JSON_INVALID;
 
   jhandle->depth--;
   return ptr;  
@@ -415,8 +422,9 @@ static char *json_array(struct jhandle * const jhandle, char * const optr, char 
       last  = first;
     } else {
       jobject = JOBJECT_AT(jhandle, last);
-      jobject->next = JOBJECT_OFFSET(jhandle, value);
-      last = jobject->next;
+      jobject->bnext = ((jobject->bnext & JSON_TYPEMASK) |
+			(JOBJECT_OFFSET(jhandle, value)));
+      last = jobject->bnext & JSON_NEXTMASK;
     }
     /* Value added */
     
@@ -437,10 +445,9 @@ static char *json_array(struct jhandle * const jhandle, char * const optr, char 
  
   array = jobject_allocate(jhandle, 1);
   
-  array->type           = JSON_ARRAY;
+  array->bnext          = JSON_ARRAY << JSON_NEXTBITS; /* next offset is JSON_INVALID */
   array->u.object.count = count;
   array->u.object.child = first;
-  array->next           = JSON_INVALID;  
   
   jhandle->depth--;
   return ptr;
@@ -548,10 +555,9 @@ static char *json_string(struct jhandle * const jhandle, char * const optr, char
 
   jobject = jobject_allocate(jhandle, 1);
 
-  jobject->type            = JSON_STRING;
+  jobject->bnext           = JSON_STRING << JSON_NEXTBITS; /* next offset is JSON_INVALID */
   jobject->u.string.len    = (ptr-1) - (optr+1);
   jobject->u.string.offset = (optr+1) - jhandle->buf;
-  jobject->next            = JSON_INVALID;
   return ptr;
  fail:
   return optr;
@@ -697,10 +703,9 @@ static char *json_number(struct jhandle * const jhandle, char * const optr, char
 
   jobject = jobject_allocate(jhandle, 1);
   
-  jobject->type            = JSON_NUMBER;
+  jobject->bnext           = JSON_NUMBER << JSON_NEXTBITS; /* next offset is JSON_INVALID */
   jobject->u.string.len    = ptr - optr;
   jobject->u.string.offset = optr - jhandle->buf;
-  jobject->next            = JSON_INVALID;
   return ptr;  
  fail:
   return optr;
@@ -717,8 +722,7 @@ static char *json_true(struct jhandle * const jhandle, char * const optr, char *
        (ptr[2] == 'u') && (ptr[3] == 'e'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle, 1);
-    jobject->type = JSON_TRUE;
-    jobject->next = JSON_INVALID;
+    jobject->bnext          = JSON_TRUE << JSON_NEXTBITS; /* next offset is JSON_INVALID */
     return ptr + 4;
   } 
 
@@ -737,8 +741,7 @@ static char *json_false(struct jhandle * const jhandle, char * const optr, char 
        (ptr[4] == 'e'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle, 1);
-    jobject->type = JSON_FALSE;
-    jobject->next = JSON_INVALID;
+    jobject->bnext          = JSON_FALSE << JSON_NEXTBITS; /* next offset is JSON_INVALID */
     return ptr + 5;
   } 
 
@@ -756,8 +759,7 @@ static char *json_null(struct jhandle * const jhandle, char * const optr, char *
        (ptr[2] == 'l') && (ptr[3] == 'l'))) {
 
     struct jobject *jobject = jobject_allocate(jhandle, 1);
-    jobject->type = JSON_NULL;
-    jobject->next = JSON_INVALID;
+    jobject->bnext          = JSON_NULL << JSON_NEXTBITS; /* next offset is JSON_INVALID */
     return ptr + 4;
   } 
 

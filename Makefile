@@ -25,6 +25,7 @@
 
 CC=gcc
 CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer
+#CFLAGS=-I. -I./extras -g -Wall -Wextra -pedantic-errors -fomit-frame-pointer
 DEPS=json.h
 
 %.o: %.c $(DEPS)

@@ -92,7 +92,7 @@ static int copy_stdin(char *tmpfile) {
     char *ptr;
 
     do {
-      bytes_read = read(0, buf, 1024);
+      bytes_read = read(0, buf, 1024 * 1024);
     } while ((bytes_read == -1) && (errno == EINTR));
 
     if (bytes_read == -1) goto error;
@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
   filepath = argv[1];
   clock_gettime(CLOCK_MONOTONIC, &start); 
   
-  if (json_alloc(&jhandle, (void *)0, 1024 * 1024) == 0) {    
+  if (json_alloc(&jhandle, (void *)0, 1024) == 0) {    
 
     char tmpfile[] = "/tmp/json.XXXXXX";
 

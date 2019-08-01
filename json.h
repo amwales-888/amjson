@@ -85,11 +85,83 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
+
+/* 
+Type           ILP64   LP64   LLP64
+char              8      8       8
+short            16     16      16
+int              64     32      32
+long             64     64      32
+long long        64     64      64
+pointer          64     64      64
+
+Linux and MacOS X LP64
+Windows LLP64 
+*/
+
+#define JSON_32
+
+
+#ifdef JSON_8
+typedef unsigned char jsize_t;
+typedef unsigned char joff_t;
+#define JSIZE_MAX UCHAR_MAX
+#define JOFF_MAX  UCHAR_MAX
+
+#define JSON_NEXTMASK  0x1F
+#define JSON_TYPEBITS  3
+#define JSON_NEXTBITS  5
+#define JSON_TYPEMASK  0xE0
+
 #ifdef BIGJSON
-typedef unsigned long boff_t;     /* boff_t is used as the offset (pointer) 
-                                   * into the JSON Buffer. */
+typedef unsigned short boff_t;
+#define BOFF_MAX  USHRT_MAX
+#else
+typedef unsigned char boff_t;
+#define BOFF_MAX  UCHAR_MAX
+#endif
+#endif
+
+
+
+#ifdef JSON_16
+typedef unsigned short jsize_t;
+typedef unsigned short joff_t;
+#define JSIZE_MAX USHRT_MAX
+#define JOFF_MAX  USHRT_MAX
+
+#define JSON_NEXTMASK  0x1FFF
+#define JSON_TYPEBITS  3
+#define JSON_NEXTBITS  13
+#define JSON_TYPEMASK  0xE000
+
+#ifdef BIGJSON
+typedef unsigned int boff_t;
+#define BOFF_MAX  UINT_MAX
+#else
+typedef unsigned short boff_t;
+#define BOFF_MAX  USHRT_MAX
+#endif
+#endif
+
+#ifdef JSON_32
+typedef unsigned int jsize_t;
+typedef unsigned int joff_t;
+#define JSIZE_MAX UINT_MAX
+#define JOFF_MAX  UINT_MAX
+
+#define JSON_NEXTMASK  0x1FFFFFFF
+#define JSON_TYPEBITS  3
+#define JSON_NEXTBITS  29
+#define JSON_TYPEMASK  0xE0000000
+
+#ifdef BIGJSON
+typedef unsigned long boff_t;     /* Offset of character into JSON buffer */
+#define BOFF_MAX  ULONG_MAX
 #else
 typedef unsigned int boff_t;
+#define BOFF_MAX  UINT_MAX
+#endif
 #endif
 
 struct jobject {
@@ -102,31 +174,20 @@ struct jobject {
 #define JSON_TRUE      5 
 #define JSON_FALSE     6 
 #define JSON_NULL      7 
-  unsigned int type:3;            /* One of JSON_OBJECT, JSON_ARRAY... */
 
-#define JSON_INVALID 0            /* Use as valuie indicating end of list */
+#define JSON_INVALID   0     /* Next offset use as value indicating end of list */
 
-#if (UINT_MAX == 4294967295U)
-  unsigned int next:29;           /* Index of next chained jobject, 
-                                   * JSON_INVALID used for end of list */
-#elif (UINT_MAX == 65535)
-  unsigned int next:13;
-#elif (UINT_MAX == 255)
-  unsigned int next:5;
-#else
-#error "Cannot determine sizeof(unsigned int) on this platform"
-#endif
-  
-  
+  joff_t bnext;              /* type:next packed JSON_TYPEBITS and JSON_NEXTBITS*/
+
   union {
     struct {
-      unsigned int count;         /* Count of ALL children OR length of string */
-      unsigned int child;         /* Index of first child */
+      jsize_t count;         /* Count of ALL children */
+      joff_t  child;         /* Index of first child */
     } object;
 
     struct {
-      unsigned int len;           /* Count of ALL children OR length of string */
-      boff_t       offset;        /* First character Offset from start of JSON buffer */ 
+      jsize_t len;           /* Length of string */
+      boff_t  offset;        /* First character Offset from start of JSON buffer */ 
     } string;
 
   } u;
@@ -167,18 +228,18 @@ struct jhandle {
 /* -------------------------------------------------------------------- */
 
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
-#define JOBJECT_NEXT(jhandle,o)        (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
-#define JOBJECT_TYPE(o)                ((o)->type)
+#define JOBJECT_NEXT(jhandle,o)        ((((o)->bnext & JSON_NEXTMASK) == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->bnext & JSON_NEXTMASK))))
+#define JOBJECT_TYPE(o)                ((o)->bnext >> JSON_NEXTBITS)
 #define JOBJECT_STRING_LEN(o)          ((o)->u.string.len)
 #define JOBJECT_STRING_PTR(jhandle, o) (((jhandle)->buf)?(&((jhandle)->buf[(o)->u.string.offset])):((char *)(&(jhandle)->jobject[(o)->u.string.offset])))
 #define ARRAY_COUNT(o)                 ((o)->u.object.count)
 #define ARRAY_FIRST(jhandle, o)        (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define ARRAY_NEXT(jhandle, o)         (((o)->next == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), (o)->next)))
+#define ARRAY_NEXT(jhandle, o)         ((((o)->bnext & JSON_NEXTMASK) == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->bnext & JSON_NEXTMASK))))
 #define OBJECT_COUNT(o)                ((o)->u.object.count)
 #define OBJECT_FIRST_KEY(jhandle, o)   (((o)->u.object.count == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define OBJECT_NEXT_KEY(jhandle, o)    (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next))
-#define OBJECT_FIRST_VALUE(jhandle, o) (((o)->u.object.count == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
-#define OBJECT_NEXT_VALUE(jhandle, o)  (((o)->next == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), (o)->next)->next)))
+#define OBJECT_NEXT_KEY(jhandle, o)    ((((o)->bnext & JSON_NEXTMASK) == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->bnext & JSON_NEXTMASK))->bnext & JSON_NEXTMASK))
+#define OBJECT_FIRST_VALUE(jhandle, o) (((o)->u.object.count == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->bnext & JSON_NEXTMASK))
+#define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->bnext & JSON_NEXTMASK) == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->bnext & JSON_NEXTMASK))->bnext & JSON_NEXTMASK))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != JSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
 /* -------------------------------------------------------------------- */

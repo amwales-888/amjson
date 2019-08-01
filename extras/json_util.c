@@ -39,7 +39,7 @@ struct jobject *array_index(struct jhandle *jhandle,
   next = array->u.object.child;
   while (index--) {
     struct jobject *jobject = JOBJECT_AT(jhandle, next);
-    next = jobject->next;    
+    next = jobject->bnext & JSON_NEXTMASK;    
   }
 
   return JOBJECT_AT(jhandle, next);
@@ -64,11 +64,11 @@ struct jobject *object_find(struct jhandle *jhandle,
     if ((jobject->u.string.len == len) &&
 	(memcmp(&jhandle->buf[jobject->u.string.offset],
 		key, len) == 0)) {
-      return JOBJECT_AT(jhandle, jobject->next);
+      return JOBJECT_AT(jhandle, jobject->bnext & JSON_NEXTMASK);
     }
 
-    jobject = JOBJECT_AT(jhandle, jobject->next);
-    next = jobject->next;
+    jobject = JOBJECT_AT(jhandle, jobject->bnext & JSON_NEXTMASK);
+    next = jobject->bnext & JSON_NEXTMASK;
         
   } while (next != -1);
   
