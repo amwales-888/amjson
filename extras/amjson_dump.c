@@ -26,7 +26,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdio.h>
 
 #include "amjson.h"
-#include "amjson_dump.h"
+#include "extras/amjson_dump.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

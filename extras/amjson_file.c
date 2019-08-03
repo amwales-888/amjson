@@ -33,7 +33,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <errno.h>
 
 #include "amjson.h"
-#include "amjson_file.h"
+#include "extras/amjson_file.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

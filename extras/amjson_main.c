@@ -35,9 +35,9 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/mman.h>
 
 #include "amjson.h"
-#include "amjson_file.h"
-#include "amjson_dump.h"
-#include "amjson_query.h"
+#include "extras/amjson_file.h"
+#include "extras/amjson_dump.h"
+#include "extras/amjson_query.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

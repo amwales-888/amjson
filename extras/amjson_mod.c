@@ -27,7 +27,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdarg.h>
 
 #include "amjson.h"
-#include "amjson_mod.h"
+#include "extras/amjson_mod.h"
 
 /* -------------------------------------------------------------------- */
 

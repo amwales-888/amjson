@@ -24,8 +24,8 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * -------------------------------------------------------------------- */
 
 #include "amjson.h"
-#include "amjson_query.h"
-#include "amjson_util.h"
+#include "extras/amjson_query.h"
+#include "extras/amjson_util.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

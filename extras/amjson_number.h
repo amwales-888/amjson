@@ -23,53 +23,29 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-#include <string.h>
+#ifndef _AMJSON_NUMBER_H_
+#define _AMJSON_NUMBER_H_
 
 #include "amjson.h"
-#include "extras/amjson_util.h"
+
+/* -------------------------------------------------------------------- */
+
+#ifdef __cplusplus
+extern "C" {  
+#endif
+
+/* -------------------------------------------------------------------- */
+
+uint64_t amjson_atou64(char *ptr, bsize_t len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject *amjson_array_index(struct jhandle *jhandle,
-				   struct jobject *array, unsigned int index) {
-  joff_t next; 
 
-  if (index >= ARRAY_COUNT(array)) return (struct jobject *)0;
-
-  next = array->u.object.child;
-  while (index--) {
-    struct jobject *jobject = JOBJECT_AT(jhandle, next);
-    next = jobject->next;    
-  }
-
-  return JOBJECT_AT(jhandle, next);
+#ifdef __cplusplus
 }
+#endif
 
-/* -------------------------------------------------------------------- */
-/* -------------------------------------------------------------------- */
-struct jobject *amjson_object_find(struct jhandle *jhandle,
-				   struct jobject *object,
-				   char *key,
-				   jsize_t len) {
-  joff_t next;
+#endif
 
-  if (OBJECT_COUNT(object) == 0) return (struct jobject *)0;
 
-  next = object->u.object.child;
-  do {
 
-    struct jobject *jobject = JOBJECT_AT(jhandle, next);
-
-    if ((JOBJECT_STRING_LEN(jobject) == len) &&
-	(memcmp(&jhandle->buf[jobject->u.string.offset],
-		key, len) == 0)) {
-      return JOBJECT_AT(jhandle, jobject->next);
-    }
-
-    jobject = JOBJECT_AT(jhandle, jobject->next);
-    next = jobject->next;
-        
-  } while (next != AMJSON_INVALID);
-  
-  return (struct jobject *)0;
-}
