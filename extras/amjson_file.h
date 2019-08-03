@@ -30,14 +30,22 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* -------------------------------------------------------------------- */
 
+struct mhandle {
+
+  char         *buf;              /* File mmapped buffer */
+  size_t       len;               /* Length of buffer */  
+};
+
+/* -------------------------------------------------------------------- */
+
 #ifdef __cplusplus
 extern "C" {  
 #endif
 
 /* -------------------------------------------------------------------- */
 
-void amjson_file_unmap(struct jhandle *jhandle);
-int amjson_file_map(struct jhandle *jhandle, char *pathname, int flags);
+void amjson_file_unmap(struct mhandle *mhandle);
+int amjson_file_map(struct mhandle *mhandle, char *pathname, int flags);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

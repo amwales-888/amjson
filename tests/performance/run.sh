@@ -22,17 +22,17 @@ do
     count=0
     while [ $count -lt 10 ]
     do
-	OUT=$( ${JSONBIN} ${file} --benchmark 2>&1 )
+	${JSONBIN} ${file} --benchmark >/tmp/out
 	if [ $? -ne 0 ]
 	then
-	    echo ${OUT}
+	    cat /tmp/out
 	    echo "Failed running test."
 	    echo "--------------------------------------------------------------------"
 	    exit 1
 	fi
 
-	echo ${OUT}
-	echo ${OUT} >>${TESTDIR}/result
+	cat /tmp/out
+	cat /tmp/out >>${TESTDIR}/result
 	count=$(( $count + 1 ))
     done
 

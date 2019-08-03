@@ -127,6 +127,7 @@ static int copy_stdin(char *tmpfile) {
 int main(int argc, char **argv) {
 
   struct jhandle jhandle;
+  struct mhandle mhandle;
   char *filepath;
   int dump = 0; 
   int pretty = 0;
@@ -161,35 +162,40 @@ int main(int argc, char **argv) {
     }
   }
   
-  if (amjson_alloc(&jhandle, (void *)0, 80000000) == 0) {    
 
-    char tmpfile[] = "/tmp/amjson.XXXXXX";
+  char tmpfile[] = "/tmp/amjson.XXXXXX";
 
-    if (strcmp(filepath, "-") == 0) {
-      if (copy_stdin(tmpfile) == -1) {
-	fprintf(stderr, "Failed to copy stdin\n");
-	return 1;					  
-      }
-
-      filepath = tmpfile;
+  if (strcmp(filepath, "-") == 0) {
+    if (copy_stdin(tmpfile) == -1) {
+      fprintf(stderr, "Failed to copy stdin\n");
+      return 1;					  
     }
 
-    if (amjson_file_map(&jhandle, filepath, MAP_LOCKED|MAP_POPULATE) == 0) {      
+    filepath = tmpfile;
+  }
+
+  if (amjson_file_map(&mhandle, filepath, MAP_LOCKED|MAP_POPULATE) == 0) {
+
+    if (amjson_alloc(&jhandle, (void *)0, JOBJECT_COUNT_GUESS(mhandle.len)) == 0) {
 
       struct timespec start;
       struct timespec end;
       double elapsed;
       
       if (benchmark) {
-
+	
 	mlockall(MCL_CURRENT|MCL_FUTURE);
 	
 	clock_gettime(CLOCK_MONOTONIC, &start);
       }
       
-      if (amjson_decode(&jhandle, jhandle.buf, jhandle.len) == 0) {
+      if (amjson_decode(&jhandle, mhandle.buf, mhandle.len) == 0) {
 	
-	fprintf(stderr, "JSON valid [%d items]\n", jhandle.used);
+	fprintf(stdout, "JSON valid [file:%s size:%ld jobject:%d p:%ld]\n", 
+		filepath, 
+		jhandle.len,
+		jhandle.used,
+		jhandle.len/jhandle.used);
 
 	if (dump) {
 	  amjson_dump(&jhandle, (void *)0, 0);
@@ -199,7 +205,7 @@ int main(int argc, char **argv) {
 
 	  clock_gettime(CLOCK_MONOTONIC, &end);
 	  elapsed = tstos(&end) - tstos(&start);
-	  fprintf(stderr, "Ellapsed time seconds:%f\n", elapsed);
+	  fprintf(stdout, "Ellapsed time seconds:%f\n", elapsed);
 	  
 	} else if (query) {
 	  struct jobject *jobject = amjson_query(&jhandle, JOBJECT_ROOT(&jhandle), query);
@@ -220,22 +226,22 @@ int main(int argc, char **argv) {
 	return 1;
       }
 
-      amjson_file_unmap(&jhandle);
-      
     } else {
-      fprintf(stderr, "Failed mapping file\n");
+      fprintf(stderr, "JSON alloc failed\n");
       return 1;
     }
 
+    amjson_file_unmap(&mhandle);
+
     amjson_free(&jhandle);
 
-    if (filepath == tmpfile) {
-      unlink(tmpfile);
-    }
-    
   } else {
-    fprintf(stderr, "JSON alloc failed\n");
+    fprintf(stderr, "Failed mapping file\n");
     return 1;
+  }
+
+  if (filepath == tmpfile) {
+    unlink(tmpfile);
   }
 
   return 0;

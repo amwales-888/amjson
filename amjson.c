@@ -103,7 +103,7 @@ static unsigned char const whitespace[] = {
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 int amjson_alloc(struct jhandle * const jhandle, struct jobject *ptr,
-               unsigned int count) {
+		 joff_t count) {
 
   memset(jhandle, 0, sizeof(struct jhandle));
   
@@ -116,11 +116,14 @@ int amjson_alloc(struct jhandle * const jhandle, struct jobject *ptr,
     return 0;
   }
 
+  if (count == 0) goto error;
+
   if ((jhandle->jobject = (struct jobject *)malloc((size_t)jhandle->count *
 						   sizeof(struct jobject)))) {
     return 0;
   }
 
+ error:
   errno = EINVAL;
   return -1;
 }

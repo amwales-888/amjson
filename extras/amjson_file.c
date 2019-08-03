@@ -38,18 +38,18 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-static int file_map(struct jhandle *jhandle, char *pathname, int flags);
+static int file_map(struct mhandle *mhandle, char *pathname, int flags);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-void amjson_file_unmap(struct jhandle *jhandle) {
+void amjson_file_unmap(struct mhandle *mhandle) {
 
-  munmap(jhandle->buf, jhandle->len);
+  munmap(mhandle->buf, mhandle->len);
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-int file_map(struct jhandle *jhandle, char *pathname, int flags) {
+int file_map(struct mhandle *mhandle, char *pathname, int flags) {
 
   int         fd;
   struct stat sb;
@@ -63,10 +63,10 @@ int file_map(struct jhandle *jhandle, char *pathname, int flags) {
    * into a buffer. */
   if (sb.st_size > BOFF_MAX) goto error;
 
-  jhandle->len = sb.st_size;  
-  jhandle->buf = (char *)mmap((void *)0, jhandle->len,
+  mhandle->len = sb.st_size;  
+  mhandle->buf = (char *)mmap((void *)0, mhandle->len,
 			      PROT_READ, MAP_SHARED|flags, fd, 0);
-  if (jhandle->buf == MAP_FAILED) goto error;
+  if (mhandle->buf == MAP_FAILED) goto error;
 
   return 0;
 error:
@@ -76,9 +76,9 @@ error:
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-int amjson_file_map(struct jhandle *jhandle, char *pathname, int flags) {
+int amjson_file_map(struct mhandle *mhandle, char *pathname, int flags) {
 
-  if (file_map(jhandle, pathname, flags) != 0) {
+  if (file_map(mhandle, pathname, flags) != 0) {
     errno = EIO;
     return -1;
   }

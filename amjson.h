@@ -215,9 +215,9 @@ struct jhandle {
 				   * from deeply nested calls */
   
   struct jobject *jobject;        /* Preallocated jobject pool */
-  unsigned int   count;           /* Size of jobject pool */
-  unsigned int   used;            /* Jobjects in use */
-  unsigned int   root;            /* Index of our root object */
+  joff_t         count;           /* Size of jobject pool */
+  joff_t         used;            /* Jobjects in use */
+  joff_t         root;            /* Index of our root object */
 
   int            depth;
   int            max_depth;       /* RFC 8259 section 9 allows us to set a max depth for
@@ -248,6 +248,9 @@ struct jhandle {
 #define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != AMJSON_STRING)?((struct jobject *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
+
+#define JOBJECT_COUNT_GUESS(size) ((size) / 16)
+
 /* -------------------------------------------------------------------- */
 
 #ifndef __cplusplus
@@ -262,7 +265,7 @@ extern "C" {
 
 /* -------------------------------------------------------------------- */
 
-int amjson_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count);
+int amjson_alloc(struct jhandle *jhandle, struct jobject *ptr, joff_t count);
 void amjson_free(struct jhandle *jhandle);
 int amjson_decode(struct jhandle *jhandle, char *buf, jsize_t len);
 
