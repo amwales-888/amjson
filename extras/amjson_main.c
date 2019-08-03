@@ -32,11 +32,12 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 
-#include "json.h"
-#include "json_file.h"
-#include "json_dump.h"
-#include "json_query.h"
+#include "amjson.h"
+#include "amjson_file.h"
+#include "amjson_dump.h"
+#include "amjson_query.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -125,12 +126,12 @@ static int copy_stdin(char *tmpfile) {
 /* -------------------------------------------------------------------- */
 int main(int argc, char **argv) {
 
-  struct timespec start;
-  struct timespec end;
-  double elapsed;
-  
   struct jhandle jhandle;
   char *filepath;
+  int dump = 0; 
+  int pretty = 0;
+  int benchmark = 0;
+  char *query = (void *)0;
   
   if ((argc < 2) || (argc > 3)) {
     fprintf(stderr, "Usage: %s filepath\n", argv[0]);
@@ -140,17 +141,29 @@ int main(int argc, char **argv) {
     fprintf(stderr, "\n");
     fprintf(stderr, "filepath        - Path to file or '-' to read from stdin\n");
     fprintf(stderr, "   query        - Path to JSON object to display\n");
+    fprintf(stderr, "  --benchmark   - Map file and fill buffer cache, time decoding\n");
     fprintf(stderr, "  --dump        - Output compact JSON representation of data\n");
     fprintf(stderr, "  --dump-pretty - Output pretty printed JSON representation of data\n");
     return 1;
   }
 
   filepath = argv[1];
-  clock_gettime(CLOCK_MONOTONIC, &start); 
-  
-  if (json_alloc(&jhandle, (void *)0, 1024) == 0) {    
 
-    char tmpfile[] = "/tmp/json.XXXXXX";
+  if (argc == 3) {  
+    if (strcmp(argv[2],"--dump") == 0) {
+      dump = 1;  
+    } else if (strcmp(argv[2],"--dump-pretty") == 0) {
+      pretty = 1;
+    } else if (strcmp(argv[2],"--benchmark") == 0) {
+      benchmark = 1;
+    } else {
+      query = argv[2];
+    }
+  }
+  
+  if (amjson_alloc(&jhandle, (void *)0, 80000000) == 0) {    
+
+    char tmpfile[] = "/tmp/amjson.XXXXXX";
 
     if (strcmp(filepath, "-") == 0) {
       if (copy_stdin(tmpfile) == -1) {
@@ -161,35 +174,60 @@ int main(int argc, char **argv) {
       filepath = tmpfile;
     }
 
-    if (json_file_decode(&jhandle, filepath) == 0) {      
-      fprintf(stderr, "JSON valid [%d items]\n", jhandle.used);
+    if (amjson_file_map(&jhandle, filepath, MAP_LOCKED|MAP_POPULATE) == 0) {      
 
-      if (argc == 3) {  
-	if (strcmp(argv[2],"--dump") == 0) {
-	  json_dump(&jhandle, (void *)0, 0);
-	} else if (strcmp(argv[2],"--dump-pretty") == 0) {
-	  json_dump(&jhandle, (void *)0, 1);
-	} else {
-	  char *query = argv[2];
-	  struct jobject *jobject = json_query(&jhandle, JOBJECT_ROOT(&jhandle), query);
+      struct timespec start;
+      struct timespec end;
+      double elapsed;
+      
+      if (benchmark) {
+
+	mlockall(MCL_CURRENT|MCL_FUTURE);
+	
+	clock_gettime(CLOCK_MONOTONIC, &start);
+      }
+      
+      if (amjson_decode(&jhandle, jhandle.buf, jhandle.len) == 0) {
+	
+	fprintf(stderr, "JSON valid [%d items]\n", jhandle.used);
+
+	if (dump) {
+	  amjson_dump(&jhandle, (void *)0, 0);
+	} else if (pretty) {
+	  amjson_dump(&jhandle, (void *)0, 1);
+	} else if (benchmark) {
+
+	  clock_gettime(CLOCK_MONOTONIC, &end);
+	  elapsed = tstos(&end) - tstos(&start);
+	  fprintf(stderr, "Ellapsed time seconds:%f\n", elapsed);
+	  
+	} else if (query) {
+	  struct jobject *jobject = amjson_query(&jhandle, JOBJECT_ROOT(&jhandle), query);
 	  if (jobject) {
-	    json_dump(&jhandle, jobject, 1);
+	    amjson_dump(&jhandle, jobject, 1);
 	  } else {
 	    fprintf(stderr, "'%s' not found\n", query);
 	    return 1;
 	  }
 	}
-      }
-    } else {
-      if (errno == ENOMEM) {
-	fprintf(stderr, "Failed allocating memory\n");
+
       } else {
-	fprintf(stderr, "JSON invalid\n");
-      }      
+	if (errno == ENOMEM) {
+	  fprintf(stderr, "Failed allocating memory\n");
+	} else {
+	  fprintf(stderr, "JSON invalid\n");
+	}
+	return 1;
+      }
+
+      amjson_file_unmap(&jhandle);
+      
+    } else {
+      fprintf(stderr, "Failed mapping file\n");
       return 1;
     }
 
-    json_free(&jhandle);
+    amjson_free(&jhandle);
 
     if (filepath == tmpfile) {
       unlink(tmpfile);
@@ -200,9 +238,5 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  clock_gettime(CLOCK_MONOTONIC, &end);
-  elapsed = tstos(&end) - tstos(&start);
-  fprintf(stderr, "Ellapsed time seconds:%f\n", elapsed);
-  
   return 0;
 }

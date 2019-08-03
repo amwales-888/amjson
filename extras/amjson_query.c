@@ -23,9 +23,9 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-#include "json.h"
-#include "json_query.h"
-#include "json_util.h"
+#include "amjson.h"
+#include "amjson_query.h"
+#include "amjson_util.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -88,7 +88,7 @@ static char *query_identifier(char *ptr) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject *json_query(struct jhandle *jhandle,
+struct jobject *amjson_query(struct jhandle *jhandle,
 			     struct jobject *jobject, char *ptr) {  
 
   if (*ptr == '\0') goto fail;
@@ -104,8 +104,8 @@ struct jobject *json_query(struct jhandle *jhandle,
 	goto fail;
       } else {
 
-	if (JOBJECT_TYPE(jobject) != JSON_OBJECT) goto fail;       	
-	jobject = object_find(jhandle, jobject, ptr, (nptr - ptr));
+	if (JOBJECT_TYPE(jobject) != AMJSON_OBJECT) goto fail;       	
+	jobject = amjson_object_find(jhandle, jobject, ptr, (nptr - ptr));
 	if (!jobject) goto fail;    
 
 	ptr = nptr;
@@ -114,7 +114,7 @@ struct jobject *json_query(struct jhandle *jhandle,
     } else {
       int index = 0;
       
-      if (JOBJECT_TYPE(jobject) != JSON_ARRAY) goto fail;       	
+      if (JOBJECT_TYPE(jobject) != AMJSON_ARRAY) goto fail;       	
 
       ptr++; /* '[' */     
       while (ptr != (nptr-1)) {
@@ -125,7 +125,7 @@ struct jobject *json_query(struct jhandle *jhandle,
       
       ptr++; /* ']' */     
 
-      jobject = array_index(jhandle, jobject, index);
+      jobject = amjson_array_index(jhandle, jobject, index);
       if (!jobject) goto fail;    
 
       if (*ptr == '\0') goto success;

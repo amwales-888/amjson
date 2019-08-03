@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "json.h"
+#include "amjson.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -11,11 +11,11 @@ int main(int argc __attribute__((unused)),
 	 char **argv __attribute__((unused))) {
 
   struct jhandle jhandle;
-  char *json = "{ \"name\" : \"bob\" }";
+  char *amjson = "{ \"name\" : \"bob\" }";
   
-  if (json_alloc(&jhandle, (void *)0, 32) == 0) {
-    json_decode(&jhandle, json, strlen(json));
-    json_free(&jhandle);
+  if (amjson_alloc(&jhandle, (void *)0, 32) == 0) {
+    amjson_decode(&jhandle, amjson, strlen(amjson));
+    amjson_free(&jhandle);
   }
   
   return 0;

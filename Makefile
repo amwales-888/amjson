@@ -25,34 +25,33 @@
 
 CC=gcc
 CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer
-#CFLAGS=-I. -I./extras -g -Wall -Wextra -pedantic-errors -fomit-frame-pointer
-DEPS=json.h
+DEPS=amjson.h
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: json examples/example1 examples/example2 examples/example3 examples/example4
+all: amjson examples/example1 examples/example2 examples/example3 examples/example4
 
-json: json.o extras/json_util.o extras/json_dump.o extras/json_file.o extras/json_query.o extras/json_main.o
+amjson: amjson.o extras/amjson_util.o extras/amjson_dump.o extras/amjson_file.o extras/amjson_query.o extras/amjson_main.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-examples/example1: json.o examples/example1.o
+examples/example1: amjson.o examples/example1.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-examples/example2: json.o extras/json_dump.o  examples/example2.o
+examples/example2: amjson.o extras/amjson_dump.o  examples/example2.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-examples/example3: json.o extras/json_dump.o extras/json_query.o extras/json_util.o examples/example3.o
+examples/example3: amjson.o extras/amjson_dump.o extras/amjson_query.o extras/amjson_util.o examples/example3.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-examples/example4: json.o extras/json_dump.o extras/json_query.o extras/json_util.o extras/json_mod.o examples/example4.o 
+examples/example4: amjson.o extras/amjson_dump.o extras/amjson_query.o extras/amjson_util.o extras/amjson_mod.o examples/example4.o 
 	$(CC) -o $@ $^ $(CFLAGS)
 
 .PHONY: clean
 
 clean:
-	rm -f json json.o extras/json_util.o extras/json_dump.o extras/json_file.o \
-              extras/json_query.o extras/json_mod.o extras/json_main.o examples/example1 \
+	rm -f amjson amjson.o extras/amjson_util.o extras/amjson_dump.o extras/amjson_file.o \
+              extras/amjson_query.o extras/amjson_mod.o extras/amjson_main.o examples/example1 \
               examples/example1.o examples/example2 examples/example2.o examples/example3 \
               examples/example3.o examples/example4 examples/example4.o \
               tests/performance/genjson.o tests/performance/genjson \
@@ -60,9 +59,9 @@ clean:
 
 .PHONY: test
 
-test: json
-	@tests/JSON_checker/run.sh tests/JSON_checker/test ./json
-	@tests/JSONTestSuite/run.sh tests/JSONTestSuite/test_parsing ./json
+test: amjson
+	@tests/JSON_checker/run.sh tests/JSON_checker/test ./amjson
+	@tests/JSONTestSuite/run.sh tests/JSONTestSuite/test_parsing ./amjson
 
 .PHONY: perf
 
@@ -85,8 +84,8 @@ tests/performance/datasets/100mb.json: tests/performance/genjson tests/performan
 tests/performance/datasets/500mb.json: tests/performance/genjson tests/performance/datasets
 	tests/performance/genjson tests/performance/datasets/500mb.json 500M
 
-perf: json tests/performance/genjson tests/performance/datasets/1mb.json tests/performance/datasets/50mb.json tests/performance/datasets/100mb.json tests/performance/datasets/500mb.json
-	@tests/performance/run.sh tests/performance ./json
+perf: amjson tests/performance/genjson tests/performance/datasets/1mb.json tests/performance/datasets/50mb.json tests/performance/datasets/100mb.json tests/performance/datasets/500mb.json
+	@tests/performance/run.sh tests/performance ./amjson
 
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------

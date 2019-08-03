@@ -23,47 +23,65 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-/* This project attempts to provide a JSON parser that is able to
- * successfully parse correct JSON formatted data as described in the 
- * JSON grammar available at https://www.json.org/
- *
- * As per RFC 8259 section (9) we set a maximum depth when parsing 
- * elements, this is configurable and a default compile time constant 
- * has been provided.
- * 
- * This library is usable with just 2 files being required json.h and 
- * json.c ALL other files are optional.
- */
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <errno.h>
 
-#ifndef _JSON_MOD_H_
-#define _JSON_MOD_H_
-
-#include "json.h"
-
-/* -------------------------------------------------------------------- */
-
-#ifdef __cplusplus
-extern "C" {  
-#endif
-
-/* -------------------------------------------------------------------- */
-
-struct jobject *json_string_new(struct jhandle *jhandle, char *ptr, jsize_t len);
-struct jobject *json_object_add(struct jhandle *jhandle,
-				struct jobject *object,
-				struct jobject *string,
-				struct jobject *value);
-struct jobject *json_object_new(struct jhandle *jhandle, ...);
-struct jobject *json_array_new(struct jhandle *jhandle, ...);
-struct jobject *json_array_add(struct jhandle *jhandle,
-			       struct jobject *array,
-			       struct jobject *value);
+#include "amjson.h"
+#include "amjson_file.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-#ifdef __cplusplus
+static int file_map(struct jhandle *jhandle, char *pathname, int flags);
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+void amjson_file_unmap(struct jhandle *jhandle) {
+
+  munmap(jhandle->buf, jhandle->len);
 }
-#endif
 
-#endif
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+int file_map(struct jhandle *jhandle, char *pathname, int flags) {
+
+  int         fd;
+  struct stat sb;
+  
+  fd = open(pathname, O_RDONLY);
+  if (fd == -1) return -1;
+
+  if (fstat(fd, &sb) == -1) goto error;
+
+  /* buffer size is limited to the maximum offset we can address
+   * into a buffer. */
+  if (sb.st_size > BOFF_MAX) goto error;
+
+  jhandle->len = sb.st_size;  
+  jhandle->buf = (char *)mmap((void *)0, jhandle->len,
+			      PROT_READ, MAP_SHARED|flags, fd, 0);
+  if (jhandle->buf == MAP_FAILED) goto error;
+
+  return 0;
+error:
+  close(fd);
+  return -1;
+}
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+int amjson_file_map(struct jhandle *jhandle, char *pathname, int flags) {
+
+  if (file_map(jhandle, pathname, flags) != 0) {
+    errno = EIO;
+    return -1;
+  }
+
+  return 0;
+}

@@ -23,54 +23,30 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-#include <string.h>
+#ifndef _AMJSON_UTIL_H_
+#define _AMJSON_UTIL_H_
 
-#include "json.h"
+#include "amjson.h"
+
+/* -------------------------------------------------------------------- */
+
+#ifdef __cplusplus
+extern "C" {  
+#endif
+
+/* -------------------------------------------------------------------- */
+
+struct jobject *amjson_array_index(struct jhandle *jhandle, struct jobject *array, joff_t index);
+struct jobject *amjson_object_find(struct jhandle *jhandle, struct jobject *object, char *key, jsize_t len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-struct jobject *array_index(struct jhandle *jhandle,
-			    struct jobject *array, unsigned int index) {
 
-  joff_t next; 
-
-  if (index >= ARRAY_COUNT(array)) return (void *)0;
-
-  next = array->u.object.child;
-  while (index--) {
-    struct jobject *jobject = JOBJECT_AT(jhandle, next);
-    next = jobject->next;    
-  }
-
-  return JOBJECT_AT(jhandle, next);
+#ifdef __cplusplus
 }
+#endif
 
-/* -------------------------------------------------------------------- */
-/* -------------------------------------------------------------------- */
-struct jobject *object_find(struct jhandle *jhandle,
-			    struct jobject *object,
-			    char *key,
-			    jsize_t len) {
-  
-  joff_t next;
+#endif
 
-  if (OBJECT_COUNT(object) == 0) return (void *)0;
 
-  next = object->u.object.child;
-  do {
 
-    struct jobject *jobject = JOBJECT_AT(jhandle, next);
-
-    if ((JOBJECT_STRING_LEN(jobject) == len) &&
-	(memcmp(&jhandle->buf[jobject->u.string.offset],
-		key, len) == 0)) {
-      return JOBJECT_AT(jhandle, jobject->next);
-    }
-
-    jobject = JOBJECT_AT(jhandle, jobject->next);
-    next = jobject->next;
-        
-  } while (next != JSON_INVALID);
-  
-  return (void *)0;
-}

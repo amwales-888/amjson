@@ -1,4 +1,4 @@
-# c-json
+# amjson
 Simple JSON parser in C
 
 This project attempts to provide an RFC 8259 compliant JSON parser.
@@ -8,16 +8,16 @@ As per RFC 8259 section (9) we set a maximum depth when parsing
 elements, this is configurable and a default compile time constant 
 of 1024 has been provided.
 
-This library is usable with just 2 files being required json.h and 
-json.c ALL other files are optional.
+This library is usable with just 2 files being required amjson.h and 
+amjson.c ALL other files are optional.
 
 The parser is supplied with a sample commmand line utility that
 is generated when you make this project.
 
 ```
-    Usage: ./json filepath
-           ./json filepath query
-           ./json filepath --dump
+    Usage: ./amjson filepath
+           ./amjson filepath query
+           ./amjson filepath --dump
 
     filepath - Path to file or '-' to read from stdin
        query - Path to JSON object to display
@@ -25,17 +25,17 @@ is generated when you make this project.
       --dump - Output JSON representation of data
 ```
 
-You will be able to parse VERY large JSON files with c-json very
+You will be able to parse VERY large JSON files with amjson very
 quickly. Running on a VM, 4 Core E3-1230 V2 @ 3.30GHz 8GB
 RAM + 1GB Swap I tested a 487MB and 1.2GB file using python as
 a comparison.
 
 | Parser            | 487MB | 1.2GB   |
 | ----------------- | ----- | ------- |
-| c-json            | 1.4s  | 3.5s    |
+| amjson            | 1.4s  | 3.5s    |
 | Python 2.7.9 json | 26s   | 56s OOM |
 
-The parser was tested using the JSONTestSuite project found at
+The parser was tested using the AMJSONTestSuite project found at
 https://github.com/nst/JSONTestSuite all tests passed with no
 crashes.
 
@@ -63,7 +63,7 @@ stack space may be used if the JSON being parsed is very deep,
 however as per the RFC 8259 section (9) we can mitigate any
 problems that can occur due to very deep nesting.
 
-The functions provided outside of json.c include mechanisms to
+The functions provided outside of amjson.c include mechanisms to
 dump any JSON object, a query mechanism to select objects from
 the parsed data and a mechanism to memory map a file to be parsed.
 

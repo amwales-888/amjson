@@ -23,22 +23,10 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-/* This project attempts to provide a JSON parser that is able to
- * successfully parse correct JSON formatted data as described in the 
- * JSON grammar available at https://www.json.org/
- *
- * As per RFC 8259 section (9) we set a maximum depth when parsing 
- * elements, this is configurable and a default compile time constant 
- * has been provided.
- * 
- * This library is usable with just 2 files being required json.h and 
- * json.c ALL other files are optional.
- */
+#ifndef _AMJSON_FILE_H_
+#define _AMJSON_FILE_H_
 
-#ifndef _JSON_FILE_H_
-#define _JSON_FILE_H_
-
-#include "json.h"
+#include "amjson.h"
 
 /* -------------------------------------------------------------------- */
 
@@ -48,7 +36,8 @@ extern "C" {
 
 /* -------------------------------------------------------------------- */
 
-int json_file_decode(struct jhandle *jhandle, char *pathname);
+void amjson_file_unmap(struct jhandle *jhandle);
+int amjson_file_map(struct jhandle *jhandle, char *pathname, int flags);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

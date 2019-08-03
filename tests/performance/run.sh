@@ -22,7 +22,7 @@ do
     count=0
     while [ $count -lt 10 ]
     do
-	OUT=$( ${JSONBIN} ${file} 2>&1 )
+	OUT=$( ${JSONBIN} ${file} --benchmark 2>&1 )
 	if [ $? -ne 0 ]
 	then
 	    echo ${OUT}

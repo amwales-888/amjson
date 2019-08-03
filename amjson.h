@@ -31,14 +31,14 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * elements, this is configurable and a default compile time constant 
  * has been provided.
  * 
- * This library is usable with just 2 files being required json.h and 
- * json.c ALL other files are optional.
+ * This library is usable with just 2 files being required amjson.h and 
+ * amjson.c ALL other files are optional.
  * See the extras directory for additional features, including dumping,
  * pretty printing, object queries and JSON DOM creation.
  */
 
-#ifndef _JSON_H_
-#define _JSON_H_
+#ifndef _AMJSON_H_
+#define _AMJSON_H_
 
 /* -------------------------------------------------------------------- */
 
@@ -48,14 +48,14 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* -------------------------------------------------------------------- */
 
-#define JSON_MAXDEPTH 64          /* Set the maximum depth we will allow
+#define AMJSON_MAXDEPTH 64        /* Set the maximum depth we will allow
 				   * lists and disctions to descend. Since we
 				   * use a recursive descent parser this is 
 				   * also affects the maximum stack depth used.
 				   * You may lower this number but it will affect 
 				   * the maximum nesting of your JSON objects */
 
-/* #define BIGJSON */             /* Set string offset to use 'unsigned long',
+/* #define AMBIGJSON */           /* Set string offset to use 'unsigned long',
 				   * on 64 bit platforms, this will allow us to 
 				   * index string at offset >4GB The downside
 				   * of this is that every jobject will now
@@ -76,11 +76,11 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
    JSON Buffer                 This is a collection of bytes that contains
    +---------------+           the JSON data that is to be parsed after the 
-   |{ "key": 1234 }|           call to json_decode() The JSON buffer is never 
+   |{ "key": 1234 }|           call to amjson_decode() The JSON buffer is never 
    +---------------+           modified but MUST remain accessible to the 
                                system once parsed. This is because the system 
                                generates references into the JSON Buffer as 
-                               it is parsed. After The call to json_free() 
+                               it is parsed. After The call to amjson_free() 
                                the buffer is no longer required.
 
  * -------------------------------------------------------------------- */
@@ -101,33 +101,33 @@ Windows LLP64
 
 
 /*          
-                        JSON_8   JSON_16  JSON_32     
-MAX Array Entries       31       8191     536870911
-MAX Object Entries      15       4095     268435455
-MAX String Length       31       8191     536870911
-MAX Number Length       31       8191     536870911
-MAX Jobect Pool Size    255      65535    4294967295
-Max JSON Buffer Length  255      65535    4294967295
-Size of Jobject         3 Bytes  6 Bytes  12 Bytes
+                        AMJSON_8 AMJSON_16 AMJSON_32     
+MAX Array Entries       31       8191      536870911
+MAX Object Entries      15       4095      268435455
+MAX String Length       31       8191      536870911
+MAX Number Length       31       8191      536870911
+MAX Jobect Pool Size    255      65535     4294967295
+Max JSON Buffer Length  255      65535     4294967295
+Size of Jobject         3 Bytes  6 Bytes   12 Bytes
 
 */
 
 
-#define JSON_32
+#define AMJSON_32
 
 
-#ifdef JSON_8
+#ifdef AMJSON_8
 typedef uint8_t jsize_t;
 typedef uint8_t joff_t;
 #define JSIZE_MAX UINT8_MAX
 #define JOFF_MAX  UINT8_MAX
 
-#define JSON_LENMASK  0x1F
-#define JSON_TYPEBITS 3
-#define JSON_LENBITS  5
-#define JSON_TYPEMASK 0xE0
+#define AMJSON_LENMASK  0x1F
+#define AMJSON_TYPEBITS 3
+#define AMJSON_LENBITS  5
+#define AMJSON_TYPEMASK 0xE0
 
-#ifdef BIGJSON
+#ifdef AMBIGJSON
 typedef uint16_t boff_t;
 #define BOFF_MAX  UINT16_MAX
 #else
@@ -138,18 +138,18 @@ typedef uint8_t boff_t;
 
 
 
-#ifdef JSON_16
+#ifdef AMJSON_16
 typedef uint16_t jsize_t;
 typedef uint16_t joff_t;
 #define JSIZE_MAX UINT16_MAX
 #define JOFF_MAX  UINT16_MAX
 
-#define JSON_LENMASK  0x1FFF
-#define JSON_TYPEBITS 3
-#define JSON_LENBITS  13
-#define JSON_TYPEMASK 0xE000
+#define AMJSON_LENMASK  0x1FFF
+#define AMJSON_TYPEBITS 3
+#define AMJSON_LENBITS  13
+#define AMJSON_TYPEMASK 0xE000
 
-#ifdef BIGJSON
+#ifdef AMBIGJSON
 typedef uint32_t boff_t;
 #define BOFF_MAX  UINT32_MAX
 #else
@@ -158,18 +158,18 @@ typedef uint16_t boff_t;
 #endif
 #endif
 
-#ifdef JSON_32
+#ifdef AMJSON_32
 typedef uint32_t jsize_t;
 typedef uint32_t joff_t;
 #define JSIZE_MAX UINT32_MAX
 #define JOFF_MAX  UINT32_MAX
 
-#define JSON_LENMASK  0x1FFFFFFF
-#define JSON_TYPEBITS 3
-#define JSON_LENBITS  29
-#define JSON_TYPEMASK 0xE0000000
+#define AMJSON_LENMASK  0x1FFFFFFF
+#define AMJSON_TYPEBITS 3
+#define AMJSON_LENBITS  29
+#define AMJSON_TYPEMASK 0xE0000000
 
-#ifdef BIGJSON
+#ifdef AMBIGJSON
 typedef uint64_t boff_t;     /* Offset of character into JSON buffer */
 #define BOFF_MAX  UINT64_MAX
 #else
@@ -180,18 +180,18 @@ typedef uint32_t boff_t;
 
 struct jobject {
 
-#define JSON_UNDEFINED 0 
-#define JSON_OBJECT    1
-#define JSON_ARRAY     2 
-#define JSON_STRING    3 
-#define JSON_NUMBER    4 
-#define JSON_TRUE      5 
-#define JSON_FALSE     6 
-#define JSON_NULL      7 
+#define AMJSON_UNDEFINED 0 
+#define AMJSON_OBJECT    1
+#define AMJSON_ARRAY     2 
+#define AMJSON_STRING    3 
+#define AMJSON_NUMBER    4 
+#define AMJSON_TRUE      5 
+#define AMJSON_FALSE     6 
+#define AMJSON_NULL      7 
 
-#define JSON_INVALID   0     /* Next offset use as value indicating end of list */
+#define AMJSON_INVALID   0     /* Next offset use as value indicating end of list */
 
-  jsize_t blen;              /* type:len packed JSON_TYPEBITS and JSON_LENBITS*/
+  jsize_t blen;              /* type:len packed JSON_TYPEBITS and AMJSON_LENBITS*/
 
   union {
     struct {
@@ -199,7 +199,7 @@ struct jobject {
     } object;
 
     struct {
-      boff_t  offset;        /* First character Offset from start of JSON buffer */ 
+      boff_t  offset;        /* First character Offset from start of AMJSON buffer */ 
     } string;
 
   } u;
@@ -212,12 +212,11 @@ struct jhandle {
 
   unsigned int userbuffer:1;      /* Did user supply the buffer? */
   unsigned int useljmp:1;         /* We want to longjmp on allocation failure */
-  unsigned int hasdecoded:1;      /* json_decode has run, prevent us from modfying 
+  unsigned int hasdecoded:1;      /* amjson_decode has run, prevent us from modfying 
 				   * the jobject pool */
-  void (*onfree)
-  (struct jhandle *jhandle);      /* Function to call on freeing */
-  
-  char         *buf;              /* Unparsed json data */
+
+  char         *buf;              /* Unparsed json data, the JSON buffer */
+  char         *eptr;             /* Pointer to character after the end of the JSON buffer */
   size_t       len;               /* Length of json data */  
   jmp_buf      setjmp_ctx;        /* Allows us to return from allocation failure 
 				   * from deeply nested calls */
@@ -242,19 +241,19 @@ struct jhandle {
 /* -------------------------------------------------------------------- */
 
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
-#define JOBJECT_NEXT(jhandle,o)        ((((o)->next) == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->next))))
-#define JOBJECT_TYPE(o)                ((o)->blen >> JSON_LENBITS)
-#define JOBJECT_STRING_LEN(o)          ((o)->blen & JSON_LENMASK)
+#define JOBJECT_NEXT(jhandle,o)        ((((o)->next) == AMJSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->next))))
+#define JOBJECT_TYPE(o)                ((o)->blen >> AMJSON_LENBITS)
+#define JOBJECT_STRING_LEN(o)          ((o)->blen & AMJSON_LENMASK)
 #define JOBJECT_STRING_PTR(jhandle, o) (((jhandle)->buf)?(&((jhandle)->buf[(o)->u.string.offset])):((char *)(&(jhandle)->jobject[(o)->u.string.offset])))
-#define ARRAY_COUNT(o)                 ((o)->blen & JSON_LENMASK)
-#define ARRAY_FIRST(jhandle, o)        ((((o)->blen & JSON_LENMASK) == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define ARRAY_NEXT(jhandle, o)         ((((o)->next) == JSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->next))))
-#define OBJECT_COUNT(o)                ((o)->blen & JSON_LENMASK)
-#define OBJECT_FIRST_KEY(jhandle, o)   ((((o)->blen & JSON_LENMASK) == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define OBJECT_NEXT_KEY(jhandle, o)    ((((o)->next) == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
-#define OBJECT_FIRST_VALUE(jhandle, o) ((((o)->blen & JSON_LENMASK) == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
-#define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == JSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
-#define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != JSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
+#define ARRAY_COUNT(o)                 ((o)->blen & AMJSON_LENMASK)
+#define ARRAY_FIRST(jhandle, o)        ((((o)->blen & AMJSON_LENMASK) == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define ARRAY_NEXT(jhandle, o)         ((((o)->next) == AMJSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->next))))
+#define OBJECT_COUNT(o)                ((o)->blen & AMJSON_LENMASK)
+#define OBJECT_FIRST_KEY(jhandle, o)   ((((o)->blen & AMJSON_LENMASK) == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define OBJECT_NEXT_KEY(jhandle, o)    ((((o)->next) == AMJSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
+#define OBJECT_FIRST_VALUE(jhandle, o) ((((o)->blen & AMJSON_LENMASK) == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
+#define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == AMJSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
+#define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != AMJSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
 /* -------------------------------------------------------------------- */
 
@@ -264,9 +263,9 @@ extern "C" {
 
 /* -------------------------------------------------------------------- */
 
-int json_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count);
-void json_free(struct jhandle *jhandle);
-int json_decode(struct jhandle *jhandle, char *buf, jsize_t len);
+int amjson_alloc(struct jhandle *jhandle, struct jobject *ptr, unsigned int count);
+void amjson_free(struct jhandle *jhandle);
+int amjson_decode(struct jhandle *jhandle, char *buf, jsize_t len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

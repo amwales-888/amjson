@@ -25,8 +25,8 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdio.h>
 
-#include "json.h"
-#include "json_dump.h"
+#include "amjson.h"
+#include "amjson_dump.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -88,35 +88,35 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
     
     switch (JOBJECT_TYPE(jobject)) {
 
-    case JSON_STRING:
+    case AMJSON_STRING:
       printf("\"%.*s\"", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
       break;
-    case JSON_NUMBER:
+    case AMJSON_NUMBER:
       printf("%.*s", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
       break;
-    case JSON_OBJECT:
+    case AMJSON_OBJECT:
       printf("{");
       if (pretty) printf(nl);      
-      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), JSON_OBJECT, depth+1, pretty);
+      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), AMJSON_OBJECT, depth+1, pretty);
       if (pretty) printf(nl);
       if (pretty) dump_spaces(depth);
       printf("}");
       break;
-    case JSON_ARRAY:
+    case AMJSON_ARRAY:
       printf("[");
       if (pretty) printf(nl);
-      dump(jhandle, ARRAY_FIRST(jhandle, jobject), JSON_ARRAY, depth+1, pretty);
+      dump(jhandle, ARRAY_FIRST(jhandle, jobject), AMJSON_ARRAY, depth+1, pretty);
       printf(nl);
       if (pretty) dump_spaces(depth);
       printf("]");
       break;
-    case JSON_TRUE:
+    case AMJSON_TRUE:
       printf("true");
       break;
-    case JSON_FALSE:
+    case AMJSON_FALSE:
       printf("false");
       break;
-    case JSON_NULL:
+    case AMJSON_NULL:
       printf("null");
       break;
     }
@@ -127,7 +127,7 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
       jobject = JOBJECT_NEXT(jhandle,jobject);
     }
 
-    if ((type == JSON_OBJECT) &&
+    if ((type == AMJSON_OBJECT) &&
 	((*sep == '\0') || (*sep == ','))) {      
       if (pretty) {
 	sep = ": ";
@@ -146,7 +146,7 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-void json_dump(struct jhandle *jhandle, struct jobject *jobject, int pretty) {
+void amjson_dump(struct jhandle *jhandle, struct jobject *jobject, int pretty) {
 
   if (!jobject) jobject = JOBJECT_ROOT(jhandle);
   

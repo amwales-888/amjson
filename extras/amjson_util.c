@@ -23,40 +23,52 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-/* This project attempts to provide a JSON parser that is able to
- * successfully parse correct JSON formatted data as described in the 
- * JSON grammar available at https://www.json.org/
- *
- * As per RFC 8259 section (9) we set a maximum depth when parsing 
- * elements, this is configurable and a default compile time constant 
- * has been provided.
- * 
- * This library is usable with just 2 files being required json.h and 
- * json.c ALL other files are optional.
- */
+#include <string.h>
 
-#ifndef _JSON_QUERY_H_
-#define _JSON_QUERY_H_
-
-#include "json.h"
-
-/* -------------------------------------------------------------------- */
-
-#ifdef __cplusplus
-extern "C" {  
-#endif
-
-/* -------------------------------------------------------------------- */
-
-struct jobject *json_query(struct jhandle *jhandle, struct jobject *jobject, char *ptr);
+#include "amjson.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
+struct jobject *amjson_array_index(struct jhandle *jhandle,
+				   struct jobject *array, unsigned int index) {
+  joff_t next; 
 
-#ifdef __cplusplus
+  if (index >= ARRAY_COUNT(array)) return (void *)0;
+
+  next = array->u.object.child;
+  while (index--) {
+    struct jobject *jobject = JOBJECT_AT(jhandle, next);
+    next = jobject->next;    
+  }
+
+  return JOBJECT_AT(jhandle, next);
 }
-#endif
 
-#endif
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+struct jobject *amjson_object_find(struct jhandle *jhandle,
+				   struct jobject *object,
+				   char *key,
+				   jsize_t len) {
+  joff_t next;
 
+  if (OBJECT_COUNT(object) == 0) return (void *)0;
 
+  next = object->u.object.child;
+  do {
+
+    struct jobject *jobject = JOBJECT_AT(jhandle, next);
+
+    if ((JOBJECT_STRING_LEN(jobject) == len) &&
+	(memcmp(&jhandle->buf[jobject->u.string.offset],
+		key, len) == 0)) {
+      return JOBJECT_AT(jhandle, jobject->next);
+    }
+
+    jobject = JOBJECT_AT(jhandle, jobject->next);
+    next = jobject->next;
+        
+  } while (next != AMJSON_INVALID);
+  
+  return (void *)0;
+}
