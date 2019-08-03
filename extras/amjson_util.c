@@ -33,7 +33,7 @@ struct jobject *amjson_array_index(struct jhandle *jhandle,
 				   struct jobject *array, unsigned int index) {
   joff_t next; 
 
-  if (index >= ARRAY_COUNT(array)) return (void *)0;
+  if (index >= ARRAY_COUNT(array)) return (struct jobject *)0;
 
   next = array->u.object.child;
   while (index--) {
@@ -52,7 +52,7 @@ struct jobject *amjson_object_find(struct jhandle *jhandle,
 				   jsize_t len) {
   joff_t next;
 
-  if (OBJECT_COUNT(object) == 0) return (void *)0;
+  if (OBJECT_COUNT(object) == 0) return (struct jobject *)0;
 
   next = object->u.object.child;
   do {
@@ -70,5 +70,5 @@ struct jobject *amjson_object_find(struct jhandle *jhandle,
         
   } while (next != AMJSON_INVALID);
   
-  return (void *)0;
+  return (struct jobject *)0;
 }
