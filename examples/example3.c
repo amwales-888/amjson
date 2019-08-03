@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "amjson.h"
-#include "amjson_query.h"
-#include "amjson_dump.h"
+#include "extras/amjson_query.h"
+#include "extras/amjson_dump.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

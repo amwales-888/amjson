@@ -26,22 +26,148 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "amjson.h"
 #include "extras/amjson_number.h"
 
+
+#define COMPUTEDGOTO
+/* #define USESWITCH */
+/* #define USELOOP */
+
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
+#ifdef COMPUTEDGOTO
 uint64_t amjson_atou64(char *ptr, jsize_t len) {
-  
-  uint64_t value = (unsigned char)(*ptr - '0');
 
-  while (--len) {
+  if (len <= 20) {
 
-    value *= 10;
-    value += (unsigned char)(*ptr - '0');
+    static void *gotos[] = { 
+      &&LL0, &&LL1, &&LL2, &&LL3, &&LL4, 
+      &&LL5, &&LL6, &&LL7, &&LL8, &&LL9,
+      &&LL10, &&LL11, &&LL12, &&LL13, &&LL14, 
+      &&LL15, &&LL16, &&LL17, &&LL18, &&LL19 
+    };
 
-    ptr++;
+    uint64_t value = 0;
+
+    goto *gotos[len-1];
+
+  LL19:
+    value += 10000000000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL18:
+    value += 1000000000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL17:
+    value += 100000000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL16:
+    value += 10000000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL15:
+    value += 1000000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL14:
+    value += 100000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL13:
+    value += 10000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL12:
+    value += 1000000000000UL * (unsigned char)(*ptr++ - '0');
+  LL11:
+    value += 100000000000UL * (unsigned char)(*ptr++ - '0');
+  LL10:
+    value += 10000000000UL * (unsigned char)(*ptr++ - '0');
+  LL9:
+    value += 1000000000UL * (unsigned char)(*ptr++ - '0');
+  LL8:
+    value += 100000000UL * (unsigned char)(*ptr++ - '0');
+  LL7:
+    value += 10000000UL * (unsigned char)(*ptr++ - '0');
+  LL6:
+    value += 1000000UL * (unsigned char)(*ptr++ - '0');
+  LL5:
+    value += 100000UL * (unsigned char)(*ptr++ - '0');
+  LL4:
+    value += 10000UL * (unsigned char)(*ptr++ - '0');
+  LL3:
+    value += 1000UL * (unsigned char)(*ptr++ - '0');
+  LL2:
+    value += 100UL * (unsigned char)(*ptr++ - '0');
+  LL1:
+    value += 10UL * (unsigned char)(*ptr++ - '0');
+  LL0:
+    return value + (unsigned char)(*ptr++ - '0');
   }
 
+  return 0;
+}
+#endif
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+#ifdef USESWITCH
+uint64_t amjson_atou64(char *ptr, jsize_t len) {
+
+  if (len <= 20) {
+
+    uint64_t value = 0;
+
+    switch (len-1) {
+    case 19:
+      value += 10000000000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 18:
+      value += 1000000000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 17:
+      value += 100000000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 16:
+      value += 10000000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 15:
+      value += 1000000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 14:
+      value += 100000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 13:
+      value += 10000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 12:
+      value += 1000000000000UL * (unsigned char)(*ptr++ - '0');
+    case 11:
+      value += 100000000000UL * (unsigned char)(*ptr++ - '0');
+    case 10:
+      value += 10000000000UL * (unsigned char)(*ptr++ - '0');
+    case 9:
+      value += 1000000000UL * (unsigned char)(*ptr++ - '0');
+    case 8:
+      value += 100000000UL * (unsigned char)(*ptr++ - '0');
+    case 7:
+      value += 10000000UL * (unsigned char)(*ptr++ - '0');
+    case 6:
+      value += 1000000UL * (unsigned char)(*ptr++ - '0');
+    case 5:
+      value += 100000UL * (unsigned char)(*ptr++ - '0');
+    case 4:
+      value += 10000UL * (unsigned char)(*ptr++ - '0');
+    case 3:
+      value += 1000UL * (unsigned char)(*ptr++ - '0');
+    case 2:
+      value += 100UL * (unsigned char)(*ptr++ - '0');
+    case 1:
+      value += 10UL * (unsigned char)(*ptr++ - '0');
+    case 0:
+      return value + (unsigned char)(*ptr++ - '0');
+    }
+  }
+
+  return 0;
+}
+#endif
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+#ifdef USELOOP
+uint64_t amjson_atou64(char *ptr, jsize_t len) {
+
+  uint64_t value = (unsigned char)(*ptr++ - '0');
+  
+  while (--len) {
+    
+    value *= 10;
+    value += (unsigned char)(*ptr++ - '0');
+  }
+  
   return value;
 }
+#endif
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

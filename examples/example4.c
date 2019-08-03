@@ -6,8 +6,8 @@
 
 
 #include "amjson.h"
-#include "amjson_mod.h"
-#include "amjson_dump.h"
+#include "extras/amjson_mod.h"
+#include "extras/amjson_dump.h"
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
