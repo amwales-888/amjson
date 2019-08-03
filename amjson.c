@@ -202,7 +202,7 @@ struct jobject *jobject_allocate(struct jhandle * const jhandle, joff_t count) {
     ptr = realloc(jhandle->jobject, (ncount * sizeof(struct jobject)));	  
     if (ptr) {
       jhandle->count   = ncount;
-      jhandle->jobject = ptr;
+      jhandle->jobject = (struct jobject *)ptr;
       return jobject_allocate(jhandle, count);
     }
   }
@@ -215,15 +215,15 @@ struct jobject *jobject_allocate(struct jhandle * const jhandle, joff_t count) {
     longjmp(jhandle->setjmp_ctx, 1);  
   }
     
-  return (void *)0;
+  return (struct jobject *)0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 static char *amjson_element(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
   char *nptr;
 
   /* Consume UTF-8 BOM if it is present */
@@ -253,8 +253,8 @@ static char *amjson_element(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
   struct jobject *object;
 
   joff_t first  = AMJSON_INVALID;
@@ -267,7 +267,7 @@ static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
       (jhandle->depth < jhandle->max_depth)) {
 
     char *nptr;
-    char *comma = (void *)0;
+    char *comma = (char *)0;
     struct jobject *string;
     struct jobject *value;
     struct jobject *jobject;
@@ -364,8 +364,8 @@ static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
   struct jobject *array;
 
   joff_t first  = AMJSON_INVALID;
@@ -378,7 +378,7 @@ static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
       (jhandle->depth < jhandle->max_depth)) {
 
     char *nptr;
-    char *comma = (void *)0;
+    char *comma = (char *)0;
     struct jobject *value;
     struct jobject *jobject;
     joff_t last = AMJSON_INVALID;
@@ -453,8 +453,8 @@ static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_value(struct jhandle * const jhandle, char * const optr) {
   
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
   char *nptr;
 
   CONSUME_WHITESPACE(ptr, eptr);
@@ -492,8 +492,8 @@ static char *amjson_value(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_string(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
   struct jobject *jobject;
   jsize_t len;
   
@@ -565,8 +565,8 @@ static char *amjson_string(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_digit(char *xptr, char * const xeptr) {
 
-  register char *ptr  = xptr;
-  register char * const eptr = xeptr;
+  REGISTER char *ptr  = xptr;
+  REGISTER char * const eptr = xeptr;
   
   if ((eptr != ptr) &&
       ((unsigned char)(*ptr - '0') < 10)) {
@@ -580,8 +580,8 @@ static char *amjson_digit(char *xptr, char * const xeptr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_integer(char *optr, char * const xeptr) {
 
-  register char *ptr = optr;
-  register char * const eptr = xeptr;
+  REGISTER char *ptr = optr;
+  REGISTER char * const eptr = xeptr;
   
   if ((eptr != ptr) && 
       ((unsigned char)(*ptr - '1') < 9)) {
@@ -604,8 +604,8 @@ static char *amjson_integer(char *optr, char * const xeptr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_fraction(char *optr, char * const xeptr) {
 
-  register char *ptr = optr;
-  register char * const eptr = xeptr;
+  REGISTER char *ptr = optr;
+  REGISTER char * const eptr = xeptr;
 
   if (eptr == ptr) goto fail;  
   if (*ptr == '.') {
@@ -636,8 +636,8 @@ static char *amjson_fraction(char *optr, char * const xeptr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_exponent(char *optr, char * const xeptr) {
 
-  register char *ptr = optr;
-  register char * const eptr = xeptr;
+  REGISTER char *ptr = optr;
+  REGISTER char * const eptr = xeptr;
 
   if (eptr == ptr) goto fail;  
   if ((*ptr == 'E') || (*ptr == 'e'))  {
@@ -675,8 +675,8 @@ static char *amjson_exponent(char *optr, char * const xeptr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_number(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
   struct jobject *jobject;
   char *nptr;
   jsize_t len;
@@ -720,8 +720,8 @@ static char *amjson_number(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_true(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
   
   if (((eptr - ptr) >= 4) &&
       ((ptr[0] == 't') && (ptr[1] == 'r') && 
@@ -740,8 +740,8 @@ static char *amjson_true(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_false(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
 
   if (((eptr - ptr) >= 5) &&
       ((ptr[0] == 'f') && (ptr[1] == 'a') &&
@@ -761,8 +761,8 @@ static char *amjson_false(struct jhandle * const jhandle, char * const optr) {
 /* -------------------------------------------------------------------- */
 static char *amjson_null(struct jhandle * const jhandle, char * const optr) {
 
-  register char * const eptr = jhandle->eptr;
-  register char *ptr = optr;
+  REGISTER char * const eptr = jhandle->eptr;
+  REGISTER char *ptr = optr;
 
   if (((eptr - ptr) >= 4) &&
       ((ptr[0] == 'n') && (ptr[1] == 'u') &&

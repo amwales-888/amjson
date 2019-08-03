@@ -56,10 +56,10 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 				   * the maximum nesting of your JSON objects */
 
 /* #define AMBIGJSON */           /* Set string offset to use 'unsigned long',
-				   * on 64 bit platforms, this will allow us to 
-				   * index string at offset >4GB The downside
-				   * of this is that every jobject will now
-				   * consume 16bytes instead of 12bytes on a 
+				   * on 64 bit Linux platforms, this will allow 
+				   * us to index strings at offset >4GB The 
+				   * downside of this is that every jobject will 
+				   * now consume 16bytes instead of 12bytes on a 
 				   * 64 bit platform */
 
 /* -------------------------------------------------------------------- *
@@ -83,86 +83,37 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                                it is parsed. After The call to amjson_free() 
                                the buffer is no longer required.
 
+
+  Type           LP64   LLP64( *Windows )
+  char              8       8
+  short            16      16
+  int              32      32
+  long             64      32
+  long long        64      64
+  pointer          64      64
+
+  Linux and MacOS X LP64, Windows LLP64 
+
+                          AMJSON_8 AMJSON_16 AMJSON_32     
+  MAX Array Entries       31       8191      536870911
+  MAX Object Entries      15       4095      268435455
+  MAX String Length       31       8191      536870911
+  MAX Number Length       31       8191      536870911
+  MAX Jobect Pool Size    255      65535     4294967295
+  Max JSON Buffer Length  255      65535     4294967295
+  Size of Jobject         3 Bytes  6 Bytes   12 Bytes
+
  * -------------------------------------------------------------------- */
 
-
-/* 
-Type           ILP64   LP64   LLP64
-char              8      8       8
-short            16     16      16
-int              64     32      32
-long             64     64      32
-long long        64     64      64
-pointer          64     64      64
-
-Linux and MacOS X LP64
-Windows LLP64 
-*/
-
-
-/*          
-                        AMJSON_8 AMJSON_16 AMJSON_32     
-MAX Array Entries       31       8191      536870911
-MAX Object Entries      15       4095      268435455
-MAX String Length       31       8191      536870911
-MAX Number Length       31       8191      536870911
-MAX Jobect Pool Size    255      65535     4294967295
-Max JSON Buffer Length  255      65535     4294967295
-Size of Jobject         3 Bytes  6 Bytes   12 Bytes
-
-*/
-
-
 #define AMJSON_32
-
-
-#ifdef AMJSON_8
-typedef uint8_t jsize_t;
-typedef uint8_t joff_t;
-#define JSIZE_MAX UINT8_MAX
-#define JOFF_MAX  UINT8_MAX
-
-#define AMJSON_LENMASK  0x1F
-#define AMJSON_TYPEBITS 3
-#define AMJSON_LENBITS  5
-#define AMJSON_TYPEMASK 0xE0
-
-#ifdef AMBIGJSON
-typedef uint16_t boff_t;
-#define BOFF_MAX  UINT16_MAX
-#else
-typedef uint8_t boff_t;
-#define BOFF_MAX  UINT8_MAX
-#endif
-#endif
-
-
-
-#ifdef AMJSON_16
-typedef uint16_t jsize_t;
-typedef uint16_t joff_t;
-#define JSIZE_MAX UINT16_MAX
-#define JOFF_MAX  UINT16_MAX
-
-#define AMJSON_LENMASK  0x1FFF
-#define AMJSON_TYPEBITS 3
-#define AMJSON_LENBITS  13
-#define AMJSON_TYPEMASK 0xE000
-
-#ifdef AMBIGJSON
-typedef uint32_t boff_t;
-#define BOFF_MAX  UINT32_MAX
-#else
-typedef uint16_t boff_t;
-#define BOFF_MAX  UINT16_MAX
-#endif
-#endif
+/* #define AMJSON_16 */
+/* #define AMJSON_8  */
 
 #ifdef AMJSON_32
 typedef uint32_t jsize_t;
 typedef uint32_t joff_t;
-#define JSIZE_MAX UINT32_MAX
-#define JOFF_MAX  UINT32_MAX
+#define JSIZE_MAX       UINT32_MAX
+#define JOFF_MAX        UINT32_MAX
 
 #define AMJSON_LENMASK  0x1FFFFFFF
 #define AMJSON_TYPEBITS 3
@@ -171,12 +122,54 @@ typedef uint32_t joff_t;
 
 #ifdef AMBIGJSON
 typedef uint64_t boff_t;     /* Offset of character into JSON buffer */
-#define BOFF_MAX  UINT64_MAX
+#define BOFF_MAX        UINT64_MAX 
 #else
 typedef uint32_t boff_t;
-#define BOFF_MAX  UINT32_MAX
+#define BOFF_MAX        UINT32_MAX
 #endif
 #endif
+
+#ifdef AMJSON_16
+typedef uint16_t jsize_t;
+typedef uint16_t joff_t;
+#define JSIZE_MAX       UINT16_MAX
+#define JOFF_MAX        UINT16_MAX
+
+#define AMJSON_LENMASK  0x1FFF
+#define AMJSON_TYPEBITS 3
+#define AMJSON_LENBITS  13
+#define AMJSON_TYPEMASK 0xE000
+
+#ifdef AMBIGJSON
+typedef uint32_t boff_t;
+#define BOFF_MAX        UINT32_MAX
+#else
+typedef uint16_t boff_t;
+#define BOFF_MAX        UINT16_MAX
+#endif
+#endif
+
+#ifdef AMJSON_8
+typedef uint8_t jsize_t;
+typedef uint8_t joff_t;
+#define JSIZE_MAX       UINT8_MAX
+#define JOFF_MAX        UINT8_MAX
+
+#define AMJSON_LENMASK  0x1F
+#define AMJSON_TYPEBITS 3
+#define AMJSON_LENBITS  5
+#define AMJSON_TYPEMASK 0xE0
+
+#ifdef AMBIGJSON
+typedef uint16_t boff_t;
+#define BOFF_MAX        UINT16_MAX
+#else
+typedef uint8_t boff_t;
+#define BOFF_MAX        UINT8_MAX
+#endif
+#endif
+
+/* -------------------------------------------------------------------- */
 
 struct jobject {
 
@@ -189,7 +182,7 @@ struct jobject {
 #define AMJSON_FALSE     6 
 #define AMJSON_NULL      7 
 
-#define AMJSON_INVALID   0     /* Next offset use as value indicating end of list */
+#define AMJSON_INVALID   0   /* Next offset use as value indicating end of list */
 
   jsize_t blen;              /* type:len packed JSON_TYPEBITS and AMJSON_LENBITS*/
 
@@ -241,21 +234,27 @@ struct jhandle {
 /* -------------------------------------------------------------------- */
 
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
-#define JOBJECT_NEXT(jhandle,o)        ((((o)->next) == AMJSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->next))))
+#define JOBJECT_NEXT(jhandle,o)        ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:(JOBJECT_AT((jhandle), ((o)->next))))
 #define JOBJECT_TYPE(o)                ((o)->blen >> AMJSON_LENBITS)
 #define JOBJECT_STRING_LEN(o)          ((o)->blen & AMJSON_LENMASK)
 #define JOBJECT_STRING_PTR(jhandle, o) (((jhandle)->buf)?(&((jhandle)->buf[(o)->u.string.offset])):((char *)(&(jhandle)->jobject[(o)->u.string.offset])))
 #define ARRAY_COUNT(o)                 ((o)->blen & AMJSON_LENMASK)
-#define ARRAY_FIRST(jhandle, o)        ((((o)->blen & AMJSON_LENMASK) == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define ARRAY_NEXT(jhandle, o)         ((((o)->next) == AMJSON_INVALID)?(void *)0:(JOBJECT_AT((jhandle), ((o)->next))))
+#define ARRAY_FIRST(jhandle, o)        ((((o)->blen & AMJSON_LENMASK) == 0)?(struct jobject *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define ARRAY_NEXT(jhandle, o)         ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:(JOBJECT_AT((jhandle), ((o)->next))))
 #define OBJECT_COUNT(o)                ((o)->blen & AMJSON_LENMASK)
-#define OBJECT_FIRST_KEY(jhandle, o)   ((((o)->blen & AMJSON_LENMASK) == 0)?(void *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define OBJECT_NEXT_KEY(jhandle, o)    ((((o)->next) == AMJSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
-#define OBJECT_FIRST_VALUE(jhandle, o) ((((o)->blen & AMJSON_LENMASK) == 0)?(void *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
-#define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == AMJSON_INVALID)?(void *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
-#define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != AMJSON_STRING)?((void *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
+#define OBJECT_FIRST_KEY(jhandle, o)   ((((o)->blen & AMJSON_LENMASK) == 0)?(struct jobject *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
+#define OBJECT_NEXT_KEY(jhandle, o)    ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
+#define OBJECT_FIRST_VALUE(jhandle, o) ((((o)->blen & AMJSON_LENMASK) == 0)?(struct jobject *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
+#define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
+#define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != AMJSON_STRING)?((struct jobject *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
 /* -------------------------------------------------------------------- */
+
+#ifndef __cplusplus
+#define REGISTER register
+#else
+#define REGISTER
+#endif
 
 #ifdef __cplusplus
 extern "C" {  
