@@ -28,7 +28,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-uint64_t amjson_atou64(char *ptr, bsize_t len) {
+uint64_t amjson_atou64(char *ptr, jsize_t len) {
   
   uint64_t value = (unsigned char)(*ptr - '0');
 
