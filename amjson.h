@@ -248,8 +248,7 @@ struct jhandle {
 #define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != AMJSON_STRING)?((struct jobject *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
-
-#define JOBJECT_COUNT_GUESS(size) ((size) / 16)
+#define JOBJECT_COUNT_GUESS(size)      ((((size) / 6)<6)?6:((size) / 6))
 
 /* -------------------------------------------------------------------- */
 
