@@ -53,7 +53,8 @@ made and the only memory required is for the DOM.
 
 The parser was verfied agains the spcification using the JSONTestSuite
 project which can be found at https://github.com/nst/JSONTestSuite all 
-tests pass with no crashes.
+tests pass with no crashes. The parser was also verfied against the
+tests found in https://json.org/JSON_checker/test.zip
 
 You can verify this by using GNU make
 
