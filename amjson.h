@@ -23,7 +23,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
-/* This project attempts to provide a JSON parser that is able to
+/* This project provides a JSON parser that is able to
  * successfully parse correct JSON formatted data as described in the 
  * JSON grammar available at https://www.json.org/
  *
@@ -82,7 +82,6 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                                generates references into the JSON Buffer as 
                                it is parsed. After The call to amjson_free() 
                                the buffer is no longer required.
-
 
   Type           LP64   LLP64( *Windows )
   char              8       8
@@ -182,36 +181,38 @@ struct jobject {
 #define AMJSON_FALSE     6 
 #define AMJSON_NULL      7 
 
-#define AMJSON_INVALID   0   /* Next offset use as value indicating end of list */
+#define AMJSON_INVALID   0        /* Next offset use as value indicating 
+                                   * end of list */
 
-  jsize_t blen;              /* type:len packed JSON_TYPEBITS and AMJSON_LENBITS*/
-
+  jsize_t blen;                   /* type:len packed JSON_TYPEBITS 
+                                   * and AMJSON_LENBITS*/
   union {
     struct {
-      joff_t  child;         /* Index of first child */
+      joff_t  child;              /* Index of first child */
     } object;
 
     struct {
-      boff_t  offset;        /* First character Offset from start of AMJSON buffer */ 
+      boff_t  offset;             /* First character Offset from start of 
+                                   * AMJSON buffer */ 
     } string;
-
   } u;
 
-  joff_t next;               /* next offset into jobject pool */
+  joff_t next;                    /* next offset into jobject pool */
 
 } __attribute__((packed));
 
 struct jhandle {
 
-  unsigned int userbuffer:1;      /* Did user supply the buffer? */
-  unsigned int useljmp:1;         /* We want to longjmp on allocation failure */
-  unsigned int hasdecoded:1;      /* amjson_decode has run, prevent us from modfying 
-				   * the jobject pool */
+  unsigned int   userbuffer:1;    /* Did user supply the buffer? */
+  unsigned int   useljmp:1;       /* We want to longjmp on allocation failure */
+  unsigned int   hasdecoded:1;    /* amjson_decode has run, prevent us from 
+                                   * modfying the jobject pool */
 
-  char         *buf;              /* Unparsed json data, the JSON buffer */
-  char         *eptr;             /* Pointer to character after the end of the JSON buffer */
-  size_t       len;               /* Length of json data */  
-  jmp_buf      setjmp_ctx;        /* Allows us to return from allocation failure 
+  char           *buf;            /* Unparsed json data, the JSON buffer */
+  char           *eptr;           /* Pointer to character after the end of 
+                                   * the JSON buffer */
+  size_t         len;             /* Length of json data */  
+  jmp_buf        setjmp_ctx;      /* Allows us to return from allocation failure 
 				   * from deeply nested calls */
   
   struct jobject *jobject;        /* Preallocated jobject pool */
@@ -220,8 +221,8 @@ struct jhandle {
   joff_t         root;            /* Index of our root object */
 
   int            depth;
-  int            max_depth;       /* RFC 8259 section 9 allows us to set a max depth for
-				   * list and object traversal */
+  int            max_depth;       /* RFC 8259 section 9 allows us to set a 
+                                   * max depth for list and object traversal */
 };
 
 /* -------------------------------------------------------------------- */
@@ -248,7 +249,8 @@ struct jhandle {
 #define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != AMJSON_STRING)?((struct jobject *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
-#define JOBJECT_COUNT_GUESS(size)      ((((size) / 6)<6)?6:((size) / 6))
+#define JOBJECT_P                      6
+#define JOBJECT_COUNT_GUESS(size)      ((((size) / JOBJECT_P)<JOBJECT_P)?JOBJECT_P:((size) / JOBJECT_P))
 
 /* -------------------------------------------------------------------- */
 
@@ -264,9 +266,39 @@ extern "C" {
 
 /* -------------------------------------------------------------------- */
 
+/* Summary: Create a new amjson context.
+ * jhandle: This is a pointer to an uninitialised jhandle structure.
+ *          On success the context will be initialised, a subsequent call
+ *          to amjson_free() must be made to release any resources held.
+ * ptr:     This is a pointer to an allocated jobject pool. 
+ *          If this is (struct jobject *)0 the jobject pool will be 
+ *          allocated by this call.
+ * count:   This is the count of struct jobject object in the pool or
+ *          if the jobject pool is to be allocated, it's initial count.
+ *
+ * Return 0 on success and !0 on failure.
+ */
 int amjson_alloc(struct jhandle *jhandle, struct jobject *ptr, joff_t count);
-void amjson_free(struct jhandle *jhandle);
+
+/* Summary: Decode a buffer holding JSON data using the amjson context 
+ *          allocated by the call to amjson_alloc()
+ * jhandle: This is a pointer to an initialised jhandle structure.
+ * buf:     This is a pointer to a buffer holding JSON data to be parsed.
+ *          The contents of this buffer MUST not be freed or changed while
+ *          the amjson context exists.
+ * len:     This is the length of the JSON buffer in bytes.
+ *
+ * Return 0 on success and !0 on failure.
+ * The value of errno will be set to EINVAL if an error ocurred parsing
+ * the JSON buffer. ENOMEM indicates a problem allocating an object from
+ * the jobject pool.
+ */
 int amjson_decode(struct jhandle *jhandle, char *buf, jsize_t len);
+
+/* Summary: Release any resources held by an initialised amjson context.
+ * jhandle: This is a pointer to an initialised jhandle structure.
+ */
+void amjson_free(struct jhandle *jhandle);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -274,5 +306,4 @@ int amjson_decode(struct jhandle *jhandle, char *buf, jsize_t len);
 #ifdef __cplusplus
 }
 #endif
-
 #endif
