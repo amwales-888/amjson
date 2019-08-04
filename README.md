@@ -41,8 +41,8 @@ The parser is supplied with a example command line utility called
       filepath      - Path to file or '-' to read from stdin
       query         - Path to JSON object to display
        	              eg. "uk.people[10].name"
-      --dump        - Output JSON representation of data
-      --dump-pretty - Output minified JSON representation of data
+      --dump        - Output minified JSON representation of data
+      --dump-pretty - Output pretty printed JSON representation of data
       --benchmark   - Output parsing statistics
 ```
 
