@@ -42,7 +42,7 @@ The parser is supplied with a example command line utility called
       query         - Path to JSON object to display
        	              eg. "uk.people[10].name"
       --dump        - Output JSON representation of data
-      --dump-pretty - Output minimized JSON representation of data
+      --dump-pretty - Output minified JSON representation of data
       --benchmark   - Output parsing statistics
 ```
 
@@ -72,7 +72,7 @@ Support functions are provided in the 'extras' directory.
 They include functionality to, query the DOM, create a new DOM, dump
 the DOM and manipulate the DOM.
 
-##### Q. Why would you want to use this JSON parser?
+##### Q. Why would I want to use this JSON parser?
 You have small memory requirements, the internal representation 
 for the DOM are configurable. They can be as low as 3 bytes!
 Using 12 bytes gives you access to buffers upto 4GB in size.
@@ -97,3 +97,4 @@ constant of 64 has been provided.
 Using the compile time options it should be possile to choose
 a relatively small stack depth and choose a small DOM 
 representation size, YMWV.
+
