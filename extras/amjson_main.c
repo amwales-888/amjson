@@ -23,6 +23,12 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
  * -------------------------------------------------------------------- */
 
+#if __STDC_VERSION__ >= 199901L
+#define _XOPEN_SOURCE 600
+#else
+#define _XOPEN_SOURCE 500
+#endif
+
 #include <unistd.h>
 #include <time.h>
 #include <stdio.h>
@@ -132,7 +138,9 @@ int main(int argc, char **argv) {
   int dump = 0; 
   int pretty = 0;
   int benchmark = 0;
-  char *query = (void *)0;
+  char *query = (char *)0;
+  char tmpfile[] = "/tmp/amjson.XXXXXX";
+
   
   if ((argc < 2) || (argc > 3)) {
     fprintf(stderr, "Usage: %s filepath\n", argv[0]);
@@ -162,9 +170,6 @@ int main(int argc, char **argv) {
     }
   }
   
-
-  char tmpfile[] = "/tmp/amjson.XXXXXX";
-
   if (strcmp(filepath, "-") == 0) {
     if (copy_stdin(tmpfile) == -1) {
       fprintf(stderr, "Failed to copy stdin\n");
@@ -174,9 +179,16 @@ int main(int argc, char **argv) {
     filepath = tmpfile;
   }
 
+#ifndef MAP_LOCKED
+#define MAP_LOCKED 0
+#endif
+#ifndef MAP_POPULATE
+#define MAP_POPULATE 0
+#endif
+
   if (amjson_file_map(&mhandle, filepath, MAP_LOCKED|MAP_POPULATE) == 0) {
 
-    if (amjson_alloc(&jhandle, (void *)0, JOBJECT_COUNT_GUESS(mhandle.len)) == 0) {
+    if (amjson_alloc(&jhandle, (struct jobject *)0, JOBJECT_COUNT_GUESS(mhandle.len)) == 0) {
 
       struct timespec start;
       struct timespec end;
@@ -198,9 +210,9 @@ int main(int argc, char **argv) {
 		jhandle.len/jhandle.used);
 
 	if (dump) {
-	  amjson_dump(&jhandle, (void *)0, 0);
+	  amjson_dump(&jhandle, (struct jobject *)0, 0);
 	} else if (pretty) {
-	  amjson_dump(&jhandle, (void *)0, 1);
+	  amjson_dump(&jhandle, (struct jobject *)0, 1);
 	} else if (benchmark) {
 
 	  clock_gettime(CLOCK_MONOTONIC, &end);

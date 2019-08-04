@@ -24,7 +24,7 @@
 ## --------------------------------------------------------------------
 
 CC=gcc
-CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer
+CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer -std=c89
 DEPS=amjson.h
 
 %.o: %.c $(DEPS)
@@ -33,7 +33,7 @@ DEPS=amjson.h
 all: amjson examples/example1 examples/example2 examples/example3 examples/example4
 
 amjson: amjson.o extras/amjson_util.o extras/amjson_dump.o extras/amjson_file.o extras/amjson_query.o extras/amjson_main.o
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(C99CFLAGS)
 
 examples/example1: amjson.o examples/example1.o
 	$(CC) -o $@ $^ $(CFLAGS)

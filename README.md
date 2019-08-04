@@ -1,5 +1,5 @@
 # amjson
-Simple JSON parser in C
+Simple JSON parser in C conforming to the C89 standard.
 
 This project provide an RFC 8259 compliant JSON parser.
 You can browse the JSON grammar at https://www.json.org/
