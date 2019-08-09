@@ -45,7 +45,7 @@ static joff_t amjson_strdup(struct jhandle *jhandle, char *ptr, jsize_t len) {
   char *dptr = (char *)jobject_allocate(jhandle,
 					(len + (sizeof(struct jobject)-1)) / sizeof(struct jobject));
 
-  if (dptr == (void *)0) return (joff_t)-1;
+  if (!dptr) return (joff_t)-1;
   
   memcpy(dptr, ptr, len);
   return JOBJECT_OFFSET(jhandle, dptr);
@@ -54,193 +54,180 @@ static joff_t amjson_strdup(struct jhandle *jhandle, char *ptr, jsize_t len) {
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *amjson_string_new(struct jhandle *jhandle,
-			    char *ptr, jsize_t len) {
+				  char *ptr, jsize_t len) {
 
-  if (!jhandle->hasdecoded) {  
+  /* TODO - check len overflow */
 
-    joff_t offset = amjson_strdup(jhandle, ptr, len);
-    if (offset != (joff_t)-1) {
+  joff_t offset = amjson_strdup(jhandle, ptr, len);
+  if (offset != (joff_t)-1) {
   
-      struct jobject *jobject = jobject_allocate(jhandle, 1);
-      if (jobject == (void *)0) return (void *)0;
+    struct jobject *jobject = jobject_allocate(jhandle, 1);
+    if (!jobject) return (struct jobject *)0;
 
-      jobject->blen            = len | (AMJSON_STRING << AMJSON_LENBITS);
-      jobject->next            = AMJSON_INVALID;
-      jobject->u.string.offset = offset;
-      return jobject;
-    }
+    jobject->blen            = len | AMJSON_STRBUFMASK | (AMJSON_STRING << AMJSON_LENBITS);
+    jobject->next            = AMJSON_INVALID;
+    jobject->u.string.offset = offset;
+    return jobject;
   }
   
-  return (void *)0;
+  return (struct jobject *)0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *amjson_object_add(struct jhandle *jhandle,
-				struct jobject *object,
-				struct jobject *string,
-				struct jobject *value) {
+				  struct jobject *object,
+				  struct jobject *string,
+				  struct jobject *value) {
 
-  if ((!jhandle->hasdecoded) &&
-      (JOBJECT_TYPE(object) == AMJSON_OBJECT)) {
-
+  if (JOBJECT_TYPE(object) == AMJSON_OBJECT) {
+    
     string->next = JOBJECT_OFFSET(jhandle, value);
-
+    
     if (OBJECT_COUNT(object) == 0) {
       
       object->u.object.child = JOBJECT_OFFSET(jhandle, string);
-
+      
     } else {
-
+      
       struct jobject *jobject;
       joff_t next = object->u.object.child;
       
       for (;;) {
-
+	
 	jobject = JOBJECT_AT(jhandle, next);
 	if (jobject->next == AMJSON_INVALID) break;
 	
 	next = jobject->next;
       }
-
+      
       jobject->next = JOBJECT_OFFSET(jhandle, string);
     }
     
     object->blen = (OBJECT_COUNT(object) + 2) | (AMJSON_OBJECT << AMJSON_LENBITS);
     return object;
   }
-
-  return (void *)0;
+  
+  return (struct jobject *)0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *amjson_object_new(struct jhandle *jhandle, ...) {
 
-  if (!jhandle->hasdecoded) {  
+  struct jobject *object;
+  va_list ap;
 
-    struct jobject *object;
-    va_list ap;
+  joff_t last  = AMJSON_INVALID;
+  joff_t first = AMJSON_INVALID;
 
-    joff_t last  = AMJSON_INVALID;
-    joff_t first = AMJSON_INVALID;
-
-    jsize_t count = 0;
+  jsize_t count = 0;
   
-    va_start(ap, jhandle);
+  va_start(ap, jhandle);
 
-    for(;;) {
+  for(;;) {
     
-      struct jobject *string;
-      struct jobject *value;
-      struct jobject *jobject;
+    struct jobject *string;
+    struct jobject *value;
+    struct jobject *jobject;
 
-      string = va_arg(ap, struct jobject *);
-      if (string == (void *)0) {
-	break;
-      }
+    string = va_arg(ap, struct jobject *);
+    if (!string) {
+      break;
+    }
 
-      count++;
-      if (last == AMJSON_INVALID) {
-	first = JOBJECT_OFFSET(jhandle, string);
-	last  = first;
-      } else {
-	jobject = JOBJECT_AT(jhandle, last);
-	jobject->next = JOBJECT_OFFSET(jhandle, string);
-	last = jobject->next;
-      }
-
-      value = va_arg(ap, struct jobject *);
-
-      count++;
+    count++;
+    if (last == AMJSON_INVALID) {
+      first = JOBJECT_OFFSET(jhandle, string);
+      last  = first;
+    } else {
       jobject = JOBJECT_AT(jhandle, last);
-      jobject->next = JOBJECT_OFFSET(jhandle, value);
+      jobject->next = JOBJECT_OFFSET(jhandle, string);
       last = jobject->next;
     }
 
-    va_end(ap);
+    value = va_arg(ap, struct jobject *);
 
-    object = jobject_allocate(jhandle, 1);
-    if (object == (void *)0) return (void *)0;
-
-    object->blen           = count | (AMJSON_OBJECT << AMJSON_LENBITS);
-    object->next           = AMJSON_INVALID;
-    object->u.object.child = first;
-    return object;
+    count++;
+    jobject = JOBJECT_AT(jhandle, last);
+    jobject->next = JOBJECT_OFFSET(jhandle, value);
+    last = jobject->next;
   }
 
-  return (void *)0;  
+  va_end(ap);
+
+  object = jobject_allocate(jhandle, 1);
+  if (!object) return (struct jobject *)0;
+
+  object->blen           = count | (AMJSON_OBJECT << AMJSON_LENBITS);
+  object->next           = AMJSON_INVALID;
+  object->u.object.child = first;
+  return object;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *amjson_array_new(struct jhandle *jhandle, ...) {
 
-  if (!jhandle->hasdecoded) {  
+  struct jobject *array;
+  va_list ap;
 
-    struct jobject *array;
-    va_list ap;
+  joff_t last  = AMJSON_INVALID;
+  joff_t first = AMJSON_INVALID;
 
-    joff_t last  = AMJSON_INVALID;
-    joff_t first = AMJSON_INVALID;
-
-    jsize_t count = 0;
+  jsize_t count = 0;
   
-    va_start(ap, jhandle);
+  va_start(ap, jhandle);
 
-    for(;;) {
+  for(;;) {
     
-      struct jobject *value = va_arg(ap, struct jobject *);
-      if (value == (void *)0) {
-	break;
-      }
-
-      count++;
-      if (last == AMJSON_INVALID) {
-	first = JOBJECT_OFFSET(jhandle, value);
-	last  = first;
-      } else {
-	struct jobject *jobject = JOBJECT_AT(jhandle, last);
-
-	jobject->next = JOBJECT_OFFSET(jhandle, value);
-	last = jobject->next;
-      }
+    struct jobject *value = va_arg(ap, struct jobject *);
+    if (!value) {
+      break;
     }
-  
-    va_end(ap);
 
-    array = jobject_allocate(jhandle, 1);
-    if (array == (void *)0) return (void *)0;
+    count++;
+    if (last == AMJSON_INVALID) {
+      first = JOBJECT_OFFSET(jhandle, value);
+      last  = first;
+    } else {
+      struct jobject *jobject = JOBJECT_AT(jhandle, last);
 
-    array->blen           = count | (AMJSON_ARRAY << AMJSON_LENBITS);
-    array->next           = AMJSON_INVALID;
-    array->u.object.child = first;
-    return array;
+      jobject->next = JOBJECT_OFFSET(jhandle, value);
+      last = jobject->next;
+    }
   }
   
-  return (void *)0;
+  va_end(ap);
+
+  array = jobject_allocate(jhandle, 1);
+  if (!array) return (struct jobject *)0;
+
+  array->blen           = count | (AMJSON_ARRAY << AMJSON_LENBITS);
+  array->next           = AMJSON_INVALID;
+  array->u.object.child = first;
+  return array;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *amjson_array_add(struct jhandle *jhandle,
-			       struct jobject *array,
-			       struct jobject *value) {
-
-  if ((!jhandle->hasdecoded) &&
-      (JOBJECT_TYPE(array) == AMJSON_ARRAY)) {
-
+				 struct jobject *array,
+				 struct jobject *value) {
+  
+  if (JOBJECT_TYPE(array) == AMJSON_ARRAY) {
+    
     if (ARRAY_COUNT(array) == 0) {
       
       array->u.object.child = JOBJECT_OFFSET(jhandle, value);
-
+      
     } else {
-
+      
       struct jobject *jobject;
       joff_t next = array->u.object.child;
       
       for (;;) {
-
+	
 	jobject = JOBJECT_AT(jhandle, next);
 	if (jobject->next == AMJSON_INVALID) break;
 	
@@ -249,12 +236,25 @@ struct jobject *amjson_array_add(struct jhandle *jhandle,
       
       jobject->next = JOBJECT_OFFSET(jhandle, value);
     }
-
+    
     array->blen = (ARRAY_COUNT(array) + 1) | (AMJSON_ARRAY << AMJSON_LENBITS);
     return array;
   }
 
-  return (void *)0;
+  return (struct jobject *)0;
+}
+
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+struct jobject *amjson_update(struct jobject *old,
+			      struct jobject *new) {
+  
+  joff_t next = old->next;
+  memcpy(old, new, sizeof(struct jobject));
+  old->next = next;
+
+  return (struct jobject *)old;
 }
 
 /* -------------------------------------------------------------------- */

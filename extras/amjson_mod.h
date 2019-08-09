@@ -46,6 +46,8 @@ struct jobject *amjson_array_new(struct jhandle *jhandle, ...);
 struct jobject *amjson_array_add(struct jhandle *jhandle,
 			       struct jobject *array,
 			       struct jobject *value);
+struct jobject *amjson_update(struct jobject *old,
+			      struct jobject *new);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

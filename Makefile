@@ -30,7 +30,7 @@ DEPS=amjson.h
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: amjson examples/example1 examples/example2 examples/example3 examples/example4
+all: amjson examples/example1 examples/example2 examples/example3 examples/example4 examples/example5
 
 amjson: amjson.o extras/amjson_util.o extras/amjson_dump.o extras/amjson_file.o extras/amjson_query.o extras/amjson_main.o
 	$(CC) -o $@ $^ $(C99CFLAGS)
@@ -47,14 +47,17 @@ examples/example3: amjson.o extras/amjson_dump.o extras/amjson_query.o extras/am
 examples/example4: amjson.o extras/amjson_dump.o extras/amjson_query.o extras/amjson_util.o extras/amjson_mod.o examples/example4.o 
 	$(CC) -o $@ $^ $(CFLAGS)
 
+examples/example5: amjson.o extras/amjson_dump.o extras/amjson_query.o extras/amjson_util.o extras/amjson_mod.o examples/example5.o 
+	$(CC) -o $@ $^ $(CFLAGS)
+
 .PHONY: clean
 
 clean:
 	rm -f amjson amjson.o extras/amjson_util.o extras/amjson_dump.o extras/amjson_file.o \
               extras/amjson_query.o extras/amjson_mod.o extras/amjson_main.o examples/example1 \
               examples/example1.o examples/example2 examples/example2.o examples/example3 \
-              examples/example3.o examples/example4 examples/example4.o \
-              tests/performance/genjson.o tests/performance/genjson \
+              examples/example3.o examples/example4 examples/example4.o examples/example5 \
+              examples/example5.o tests/performance/genjson.o tests/performance/genjson \
               tests/performance/result
 
 .PHONY: test

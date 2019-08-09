@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------- *
 
-Copyright 2012 Angelo Masci
+Copyright 2019 Angelo Masci
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the 
@@ -160,9 +160,6 @@ int amjson_decode(struct jhandle * const jhandle, char *buf, jsize_t len) {
     return -1;
   }
   
-  jhandle->hasdecoded = 1;  /* Prevent user from modifying 
-			     * jobject pool */
-
   if (amjson_element(jhandle, buf) == buf) {
 
     errno = EINVAL;
@@ -552,7 +549,8 @@ static char *amjson_string(struct jhandle * const jhandle, char * const optr) {
 
  success:
 
-  len = (ptr-1) - (optr+1); /* overflow??? */
+  len = (ptr-1) - (optr+1); 
+  if (len > AMJSON_MAXSTR) goto fail; 
   
   jobject = jobject_allocate(jhandle, 1);
 
@@ -707,7 +705,8 @@ static char *amjson_number(struct jhandle * const jhandle, char * const optr) {
   if ((eptr != ptr) &&
       ((*ptr == 'e') || (*ptr == 'E'))) ptr = amjson_exponent(ptr, eptr);
 
-  len = ptr - optr; /* overflow??? */
+  len = ptr - optr; 
+  if (len > AMJSON_MAXSTR) goto fail; 
   
   jobject = jobject_allocate(jhandle, 1);
 

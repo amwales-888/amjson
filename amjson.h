@@ -95,9 +95,9 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
                           AMJSON_8 AMJSON_16 AMJSON_32     
   MAX Array Entries       31       8191      536870911
-  MAX Object Entries      15       4095      268435455
-  MAX String Length       31       8191      536870911
-  MAX Number Length       31       8191      536870911
+  MAX Object Entries*     15       4095      268435455   *( Key/Value Pairs )
+  MAX String Length       15       4095      268435455
+  MAX Number Length       15       4095      268435455
   MAX Jobect Pool Size    255      65535     4294967295
   Max JSON Buffer Length  255      65535     4294967295
   Size of Jobject         3 Bytes  6 Bytes   12 Bytes
@@ -113,11 +113,8 @@ typedef uint32_t jsize_t;
 typedef uint32_t joff_t;
 #define JSIZE_MAX       UINT32_MAX
 #define JOFF_MAX        UINT32_MAX
-
-#define AMJSON_LENMASK  0x1FFFFFFF
 #define AMJSON_TYPEBITS 3
 #define AMJSON_LENBITS  29
-#define AMJSON_TYPEMASK 0xE0000000
 
 #ifdef AMBIGJSON
 typedef uint64_t boff_t;     /* Offset of character into JSON buffer */
@@ -133,11 +130,8 @@ typedef uint16_t jsize_t;
 typedef uint16_t joff_t;
 #define JSIZE_MAX       UINT16_MAX
 #define JOFF_MAX        UINT16_MAX
-
-#define AMJSON_LENMASK  0x1FFF
 #define AMJSON_TYPEBITS 3
 #define AMJSON_LENBITS  13
-#define AMJSON_TYPEMASK 0xE000
 
 #ifdef AMBIGJSON
 typedef uint32_t boff_t;
@@ -154,10 +148,8 @@ typedef uint8_t joff_t;
 #define JSIZE_MAX       UINT8_MAX
 #define JOFF_MAX        UINT8_MAX
 
-#define AMJSON_LENMASK  0x1F
 #define AMJSON_TYPEBITS 3
 #define AMJSON_LENBITS  5
-#define AMJSON_TYPEMASK 0xE0
 
 #ifdef AMBIGJSON
 typedef uint16_t boff_t;
@@ -167,6 +159,18 @@ typedef uint8_t boff_t;
 #define BOFF_MAX        UINT8_MAX
 #endif
 #endif
+
+#define AMJSON_LENMASK    ((JSIZE_MAX) >> (AMJSON_TYPEBITS))
+#define AMJSON_TYPEMASK   ((JSIZE_MAX) << (AMJSON_LENBITS))
+
+/* String/Numbers are found in either the JSON buffer (STRJSONBUF) 
+ * or the Jobject Pool (STRJOBJECTPOOL)
+ */
+#define AMJSON_STRLENMASK ((JSIZE_MAX) >> (AMJSON_TYPEBITS+1))
+#define AMJSON_MAXSTR     AMJSON_STRLENMASK
+#define STRJSONBUF        0
+#define STRJOBJECTPOOL    1
+#define AMJSON_STRBUFMASK (1 << (AMJSON_LENBITS-1))
 
 /* -------------------------------------------------------------------- */
 
@@ -185,7 +189,7 @@ struct jobject {
                                    * end of list */
 
   jsize_t blen;                   /* type:len packed JSON_TYPEBITS 
-                                   * and AMJSON_LENBITS*/
+                                   * and AMJSON_LENBITS */
   union {
     struct {
       joff_t  child;              /* Index of first child */
@@ -205,8 +209,6 @@ struct jhandle {
 
   unsigned int   userbuffer:1;    /* Did user supply the buffer? */
   unsigned int   useljmp:1;       /* We want to longjmp on allocation failure */
-  unsigned int   hasdecoded:1;    /* amjson_decode has run, prevent us from 
-                                   * modfying the jobject pool */
 
   char           *buf;            /* Unparsed json data, the JSON buffer */
   char           *eptr;           /* Pointer to character after the end of 
@@ -237,8 +239,10 @@ struct jhandle {
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
 #define JOBJECT_NEXT(jhandle,o)        ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:(JOBJECT_AT((jhandle), ((o)->next))))
 #define JOBJECT_TYPE(o)                ((o)->blen >> AMJSON_LENBITS)
-#define JOBJECT_STRING_LEN(o)          ((o)->blen & AMJSON_LENMASK)
-#define JOBJECT_STRING_PTR(jhandle, o) (((jhandle)->buf)?(&((jhandle)->buf[(o)->u.string.offset])):((char *)(&(jhandle)->jobject[(o)->u.string.offset])))
+
+#define JOBJECT_STRING_LEN(o)          ((o)->blen & AMJSON_STRLENMASK)
+#define JOBJECT_STRING_PTR(jhandle, o) (((o)->blen & AMJSON_STRBUFMASK)?((char *)(&(jhandle)->jobject[(o)->u.string.offset])):(&((jhandle)->buf[(o)->u.string.offset])))
+
 #define ARRAY_COUNT(o)                 ((o)->blen & AMJSON_LENMASK)
 #define ARRAY_FIRST(jhandle, o)        ((((o)->blen & AMJSON_LENMASK) == 0)?(struct jobject *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
 #define ARRAY_NEXT(jhandle, o)         ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:(JOBJECT_AT((jhandle), ((o)->next))))
