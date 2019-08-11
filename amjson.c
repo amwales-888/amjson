@@ -299,7 +299,7 @@ static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
     count++;
     
     string = JOBJECT_LAST(jhandle);
-    if (last == AMJSON_INVALID) {
+    if (count == 1) {
       first = JOBJECT_OFFSET(jhandle, string);
       last  = first;
     } else {
@@ -411,7 +411,7 @@ static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
     count++;
     
     value = JOBJECT_LAST(jhandle);
-    if (last == AMJSON_INVALID) {
+    if (count == 1) {
       first = JOBJECT_OFFSET(jhandle, value);
       last  = first;
     } else {
