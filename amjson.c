@@ -32,19 +32,19 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-static char *amjson_element(struct jhandle * const jhandle, char * const optr);
-static char *amjson_object(struct jhandle * const jhandle, char * const optr);
-static char *amjson_array(struct jhandle * const jhandle, char * const optr);
-static char *amjson_value(struct jhandle * const jhandle, char * const optr);
-static char *amjson_string(struct jhandle * const jhandle, char * const optr);
-static char *amjson_digit(char *ptr, char * const xeptr);
-static char *amjson_integer(char *ptr, char * const xeptr);
-static char *amjson_fraction(char *ptr, char * const xeptr);
-static char *amjson_exponent(char *ptr, char * const xeptr);
-static char *amjson_number(struct jhandle * const jhandle, char * const optr);
-static char *amjson_true(struct jhandle * const jhandle, char * const optr);
-static char *amjson_false(struct jhandle * const jhandle, char * const optr);
-static char *amjson_null(struct jhandle * const jhandle, char * const optr);
+int amjson_element(struct jhandle * const jhandle, char **optr);
+int amjson_object(struct jhandle * const jhandle, char **optr);
+int amjson_array(struct jhandle * const jhandle, char **optr);
+int amjson_value(struct jhandle * const jhandle, char **optr);
+int amjson_string(struct jhandle * const jhandle, char **optr);
+int amjson_digit(char **ptr, char * const xeptr);
+int amjson_integer(char **ptr, char * const xeptr);
+int amjson_fraction(char **ptr, char * const xeptr);
+int amjson_exponent(char **ptr, char * const xeptr);
+int amjson_number(struct jhandle * const jhandle, char **optr);
+int amjson_true(struct jhandle * const jhandle, char **optr);
+int amjson_false(struct jhandle * const jhandle, char **optr);
+int amjson_null(struct jhandle * const jhandle, char **optr);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
@@ -142,6 +142,7 @@ void amjson_free(struct jhandle *jhandle) {
 int amjson_decode(struct jhandle * const jhandle, char *buf, jsize_t len) {
 
   struct jobject *object;
+  char *ptr = buf;
 
   jhandle->buf  = buf;
   jhandle->len  = len;
@@ -160,7 +161,7 @@ int amjson_decode(struct jhandle * const jhandle, char *buf, jsize_t len) {
     return -1;
   }
   
-  if (amjson_element(jhandle, buf) == buf) {
+  if (!amjson_element(jhandle, &ptr)) {
 
     errno = EINVAL;
     return -1;
@@ -220,11 +221,10 @@ struct jobject *jobject_allocate(struct jhandle * const jhandle, joff_t count) {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_element(struct jhandle * const jhandle, char * const optr) {
+int amjson_element(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
-  char *nptr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
 
   /* Consume UTF-8 BOM if it is present */
   if (((eptr - ptr) >= 3) &&
@@ -238,23 +238,24 @@ static char *amjson_element(struct jhandle * const jhandle, char * const optr) {
   if (eptr == ptr) goto fail;
   CONSUME_WHITESPACE(ptr, eptr);
 
-  nptr = amjson_value(jhandle, ptr);
-  if (nptr == ptr) goto fail;
-  ptr = nptr;
+  if (!amjson_value(jhandle, &ptr)) goto fail;
   
   CONSUME_WHITESPACE(ptr, eptr);
-  if (eptr == ptr) return ptr;
+  if (eptr != ptr) goto fail;
+
+  *optr = ptr;
+  return 1;
 
  fail:
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
+int amjson_object(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
   struct jobject *object;
 
   joff_t first  = AMJSON_INVALID;
@@ -266,7 +267,6 @@ static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
   if ((*ptr == '{') &&
       (jhandle->depth < jhandle->max_depth)) {
 
-    char *nptr;
     char *comma = (char *)0;
     struct jobject *string;
     struct jobject *value;
@@ -287,13 +287,11 @@ static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
 
     CONSUME_WHITESPACE(ptr, eptr);
 
-    nptr = amjson_string(jhandle, ptr);
-    if (nptr == ptr) {
+    if (!amjson_string(jhandle, &ptr)) {
       if (comma) ptr = comma;
       
       goto fail;
     }
-    ptr = nptr;
 
     /* Add string to list */
     count++;
@@ -318,10 +316,7 @@ static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
 
     ptr++;
     
-    nptr = amjson_value(jhandle, ptr);
-    if (nptr == ptr) goto fail;
-
-    ptr = nptr;
+    if (!amjson_value(jhandle, &ptr)) goto fail;
 
     /* Add value to list */
     count++;
@@ -354,18 +349,21 @@ static char *amjson_object(struct jhandle * const jhandle, char * const optr) {
   object->u.object.child = first;
 
   jhandle->depth--;
-  return ptr;  
+
+  *optr = ptr;
+  return 1;
+
  fail:
   jhandle->depth--;
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
+int amjson_array(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
   struct jobject *array;
 
   joff_t first  = AMJSON_INVALID;
@@ -377,7 +375,6 @@ static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
   if ((*ptr == '[') &&
       (jhandle->depth < jhandle->max_depth)) {
 
-    char *nptr;
     char *comma = (char *)0;
     struct jobject *value;
     struct jobject *jobject;
@@ -394,8 +391,7 @@ static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
     
   nextvalue:
 
-    nptr = amjson_value(jhandle, ptr);
-    if (nptr == ptr) {
+    if (!amjson_value(jhandle, &ptr)) {
       if (comma) ptr = comma;
 
       if (eptr == ptr) goto fail;  
@@ -405,7 +401,6 @@ static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
       }
       goto fail;
     }
-    ptr = nptr;
 
     /* Add value to list */
     count++;
@@ -443,57 +438,58 @@ static char *amjson_array(struct jhandle * const jhandle, char * const optr) {
   array->u.object.child = first;
   
   jhandle->depth--;
-  return ptr;
+
+  *optr = ptr;
+  return 1;
+
  fail:
   jhandle->depth--;
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_value(struct jhandle * const jhandle, char * const optr) {
+int amjson_value(struct jhandle * const jhandle, char **optr) {
   
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
-  char *nptr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
 
   CONSUME_WHITESPACE(ptr, eptr);
   if (ptr == eptr) goto fail;
 
   if (*ptr == '"') {
-    nptr = amjson_string(jhandle, ptr);
-  } else if (((unsigned char)(*ptr - '0') < 10) ||
-	     (*ptr == '-')) {
-    nptr = amjson_number(jhandle, ptr);
+    if (!amjson_string(jhandle, &ptr)) goto fail;
+  } else if (((unsigned char)(*ptr - '0') < 10) || (*ptr == '-')) {
+    if (!amjson_number(jhandle, &ptr)) goto fail;
   } else if (*ptr == '{') {
-    nptr = amjson_object(jhandle, ptr);
+    if (!amjson_object(jhandle, &ptr)) goto fail;
   } else if (*ptr == '[') {
-    nptr = amjson_array(jhandle, ptr);
+    if (!amjson_array(jhandle, &ptr)) goto fail;
   } else if (*ptr == 't') {
-    nptr = amjson_true(jhandle, ptr);
+    if (!amjson_true(jhandle, &ptr)) goto fail;
   } else if (*ptr == 'f') {
-    nptr = amjson_false(jhandle, ptr);
+    if (!amjson_false(jhandle, &ptr)) goto fail;
   } else if (*ptr == 'n') {
-    nptr = amjson_null(jhandle, ptr);
+    if (!amjson_null(jhandle, &ptr)) goto fail;
   } else {
     goto fail;
   }
   
-  if (nptr == ptr) goto fail;
-  ptr = nptr;
-
   CONSUME_WHITESPACE(ptr, eptr);
-  return ptr;
+
+  *optr = ptr;
+  return 1;
+
  fail:
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_string(struct jhandle * const jhandle, char * const optr) {
+int amjson_string(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
   struct jobject *jobject;
   jsize_t len;
   
@@ -549,40 +545,44 @@ static char *amjson_string(struct jhandle * const jhandle, char * const optr) {
 
  success:
 
-  len = (ptr-1) - (optr+1); 
+  len = (ptr-1) - ((*optr)+1); 
   if (len > AMJSON_MAXSTR) goto fail; 
   
   jobject = jobject_allocate(jhandle, 1);
 
   jobject->blen            = len | (AMJSON_STRING << AMJSON_LENBITS);
   jobject->next            = AMJSON_INVALID;
-  jobject->u.string.offset = (optr+1) - jhandle->buf;
-  return ptr;
+  jobject->u.string.offset = ((*optr)+1) - jhandle->buf;
+
+  *optr = ptr;
+  return 1;
+
  fail:
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_digit(char *xptr, char * const xeptr) {
+int amjson_digit(char **optr, char * const xeptr) {
 
-  REGISTER char *ptr  = xptr;
-  REGISTER char * const eptr = xeptr;
+  char *ptr  = *optr;
+  char * const eptr = xeptr;
   
   if ((eptr != ptr) &&
       ((unsigned char)(*ptr - '0') < 10)) {
-    ptr++;
+    *optr = ptr + 1;
+    return 1;
   }
     
-  return ptr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_integer(char *optr, char * const xeptr) {
+int amjson_integer(char **optr, char * const xeptr) {
 
-  REGISTER char *ptr = optr;
-  REGISTER char * const eptr = xeptr;
+  char *ptr = *optr;
+  char * const eptr = xeptr;
   
   if ((eptr != ptr) && 
       ((unsigned char)(*ptr - '1') < 9)) {
@@ -595,55 +595,48 @@ static char *amjson_integer(char *optr, char * const xeptr) {
       goto nextdigit;
     }
 
-    return ptr;
+    *optr = ptr;
+    return 1;
   }
 
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_fraction(char *optr, char * const xeptr) {
+int amjson_fraction(char **optr, char * const xeptr) {
 
-  REGISTER char *ptr = optr;
-  REGISTER char * const eptr = xeptr;
+  char *ptr = *optr;
+  char * const eptr = xeptr;
 
   if (eptr == ptr) goto fail;  
   if (*ptr == '.') {
-
-    char *nptr;
     ptr++;
 
-    nptr = amjson_digit(ptr, eptr);
-    if (nptr == ptr) goto fail;
-
-    ptr = nptr;
+    if (!amjson_digit(&ptr, eptr)) goto fail;
 
     for (;;) {
-      nptr = amjson_digit(ptr, eptr);
-      if (nptr == ptr) goto success;
-
-      ptr = nptr;
+      if (!amjson_digit(&ptr, eptr)) goto success;
     }
   } 
 
  success:
-  return ptr;
+  *optr = ptr;
+  return 1;
+
  fail:
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_exponent(char *optr, char * const xeptr) {
+int amjson_exponent(char **optr, char * const xeptr) {
 
-  REGISTER char *ptr = optr;
-  REGISTER char * const eptr = xeptr;
+  char *ptr = *optr;
+  char * const eptr = xeptr;
 
   if (eptr == ptr) goto fail;  
   if ((*ptr == 'E') || (*ptr == 'e'))  {
-
-    char *nptr;
     ptr++;
 
     if (eptr == ptr) goto fail;  
@@ -653,33 +646,28 @@ static char *amjson_exponent(char *optr, char * const xeptr) {
       ptr++;
     }
 
-    nptr = amjson_digit(ptr, eptr);
-    if (nptr == ptr) goto fail;
-
-    ptr = nptr;
+    if (!amjson_digit(&ptr, eptr)) goto fail;
 
     for (;;) {
-      nptr = amjson_digit(ptr, eptr);
-      if (nptr == ptr) goto success;
-
-      ptr = nptr;
+      if (!amjson_digit(&ptr, eptr)) goto success;
     }
   }
 
  success:
-  return ptr;
+  *optr = ptr;  
+  return 1;
+
  fail:
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_number(struct jhandle * const jhandle, char * const optr) {
+int amjson_number(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
   struct jobject *jobject;
-  char *nptr;
   jsize_t len;
 
   if (eptr == ptr) goto fail;  
@@ -687,8 +675,7 @@ static char *amjson_number(struct jhandle * const jhandle, char * const optr) {
     ptr++;
   }
 
-  nptr = amjson_integer(ptr, eptr);
-  if (nptr == ptr) {
+  if (!amjson_integer(&ptr, eptr)) {
     if (eptr == ptr) goto fail;  
     if (*ptr == '0') {
       ptr++;
@@ -696,34 +683,37 @@ static char *amjson_number(struct jhandle * const jhandle, char * const optr) {
     }
     goto fail;
   }
-  ptr = nptr;
   
  fraction:
 
-  if ((eptr != ptr) && (*ptr == '.')) ptr = amjson_fraction(ptr, eptr);
+  if ((eptr != ptr) && 
+      (*ptr == '.')) (void)amjson_fraction(&ptr, eptr);
 
   if ((eptr != ptr) &&
-      ((*ptr == 'e') || (*ptr == 'E'))) ptr = amjson_exponent(ptr, eptr);
+      ((*ptr == 'e') || (*ptr == 'E'))) (void)amjson_exponent(&ptr, eptr);
 
-  len = ptr - optr; 
+  len = ptr - (*optr); 
   if (len > AMJSON_MAXSTR) goto fail; 
   
   jobject = jobject_allocate(jhandle, 1);
 
   jobject->blen            = len | (AMJSON_NUMBER << AMJSON_LENBITS);
   jobject->next            = AMJSON_INVALID;
-  jobject->u.string.offset = optr - jhandle->buf;
-  return ptr;  
+  jobject->u.string.offset = (*optr) - jhandle->buf;
+
+  *optr = ptr;
+  return 1;  
+
  fail:
-  return optr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_true(struct jhandle * const jhandle, char * const optr) {
+int amjson_true(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
   
   if (((eptr - ptr) >= 4) &&
       ((ptr[0] == 't') && (ptr[1] == 'r') && 
@@ -732,18 +722,20 @@ static char *amjson_true(struct jhandle * const jhandle, char * const optr) {
     struct jobject *jobject = jobject_allocate(jhandle, 1);
     jobject->blen           = AMJSON_TRUE << AMJSON_LENBITS; 
     jobject->next           = AMJSON_INVALID;
-    return ptr + 4;
+
+    *optr =  ptr + 4;
+    return 1;
   } 
 
-  return ptr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_false(struct jhandle * const jhandle, char * const optr) {
+int amjson_false(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
 
   if (((eptr - ptr) >= 5) &&
       ((ptr[0] == 'f') && (ptr[1] == 'a') &&
@@ -753,18 +745,20 @@ static char *amjson_false(struct jhandle * const jhandle, char * const optr) {
     struct jobject *jobject = jobject_allocate(jhandle, 1);
     jobject->blen           = AMJSON_FALSE << AMJSON_LENBITS; 
     jobject->next           = AMJSON_INVALID;
-    return ptr + 5;
+
+    *optr = ptr + 5;
+    return 1;
   } 
 
-  return ptr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static char *amjson_null(struct jhandle * const jhandle, char * const optr) {
+int amjson_null(struct jhandle * const jhandle, char **optr) {
 
-  REGISTER char * const eptr = jhandle->eptr;
-  REGISTER char *ptr = optr;
+  char *ptr = *optr;
+  char * const eptr = jhandle->eptr;
 
   if (((eptr - ptr) >= 4) &&
       ((ptr[0] == 'n') && (ptr[1] == 'u') &&
@@ -773,10 +767,12 @@ static char *amjson_null(struct jhandle * const jhandle, char * const optr) {
     struct jobject *jobject = jobject_allocate(jhandle, 1);
     jobject->blen           = AMJSON_NULL << AMJSON_LENBITS; 
     jobject->next           = AMJSON_INVALID;
-    return ptr + 4;
+
+    *optr = ptr + 4;
+    return 1;
   } 
 
-  return ptr;
+  return 0;
 }
 
 /* -------------------------------------------------------------------- */

@@ -25,6 +25,7 @@
 
 CC=gcc
 CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer -std=c89
+C99CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer -std=c99
 DEPS=amjson.h
 
 %.o: %.c $(DEPS)
