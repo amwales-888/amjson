@@ -24,8 +24,8 @@
 ## --------------------------------------------------------------------
 
 CC=gcc
-CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer -std=c89
-C99CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer -std=c99
+CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer -std=c89 -march=native -mtune=native
+C99CFLAGS=-I. -I./extras -O3 -Wall -Wextra -pedantic-errors -fomit-frame-pointer -std=c99 -march=native -mtune=native -D_GNU_SOURCE 
 DEPS=amjson.h
 
 %.o: %.c $(DEPS)
@@ -33,7 +33,7 @@ DEPS=amjson.h
 
 all: amjson examples/example1 examples/example2 examples/example3 examples/example4 examples/example5
 
-amjson: amjson.o extras/amjson_util.o extras/amjson_dump.o extras/amjson_file.o extras/amjson_query.o extras/amjson_main.o
+amjson: amjson.o extras/amjson_util.o extras/amjson_dump.o extras/amjson_file.o extras/amjson_query.o extras/amjson_main.c
 	$(CC) -o $@ $^ $(C99CFLAGS)
 
 examples/example1: amjson.o examples/example1.o
@@ -64,8 +64,8 @@ clean:
 .PHONY: test
 
 test: amjson
-	@tests/JSON_checker/run.sh tests/JSON_checker/test ./amjson
 	@tests/JSONTestSuite/run.sh tests/JSONTestSuite/test_parsing ./amjson
+	@tests/JSON_checker/run.sh tests/JSON_checker/test ./amjson
 
 .PHONY: perf
 

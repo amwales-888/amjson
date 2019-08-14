@@ -25,7 +25,7 @@ int main(int argc __attribute__((unused)),
 	amjson_update(jobject, 
 		      amjson_string_new(&jhandle, "fred", strlen("fred")));
 
-	amjson_dump(&jhandle, JOBJECT_ROOT(&jhandle), 1);
+	amjson_dump(&jhandle, JOBJECT_ROOT(&jhandle), 1, (char *)0, 0);
       }
     }
     amjson_free(&jhandle);

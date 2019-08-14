@@ -4,13 +4,17 @@ tests/performance/datasets
 # object files
 *.o
 
+# emacs files
+*~
+
 # binaries
-json
+amjson
 tests/performance/genjson
 examples/example1
 examples/example2
 examples/example3
 examples/example4
+examples/example5
 
 # junk left after running perf
 tests/performance/result

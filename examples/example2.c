@@ -16,7 +16,7 @@ int main(int argc __attribute__((unused)),
   
   if (amjson_alloc(&jhandle, (void *)0, 32) == 0) {
     if (amjson_decode(&jhandle, amjson, strlen(amjson)) == 0) {
-      amjson_dump(&jhandle, JOBJECT_ROOT(&jhandle), 1);
+      amjson_dump(&jhandle, JOBJECT_ROOT(&jhandle), 1, (char *)0, 0);
     }
     amjson_free(&jhandle);
   }

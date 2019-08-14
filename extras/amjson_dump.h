@@ -36,7 +36,8 @@ extern "C" {
 
 /* -------------------------------------------------------------------- */
 
-void amjson_dump(struct jhandle *jhandle, struct jobject *jobject, int pretty);
+size_t amjson_dump(struct jhandle *jhandle, struct jobject *jobject, 
+		 int pretty, char *buf, size_t len);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */

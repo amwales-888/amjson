@@ -24,6 +24,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * -------------------------------------------------------------------- */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "amjson.h"
 #include "extras/amjson_dump.h"
@@ -31,14 +32,17 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-static void dump_spaces(int count);
+static void dump_spaces(int count, size_t *written, char *buf, size_t len);
 static void dump(struct jhandle *jhandle, struct jobject *jobject,
-		 int type, int depth, int pretty);
+		 int type, int depth, int pretty, size_t *written,
+		 char *buf, size_t len);
+static size_t cpyout(char *dst, size_t dlen, char *src, size_t slen, 
+		     size_t offset);
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 
-#define MAX_SPACECOUNT 3
+#define MAX_SPACECOUNT 8
 
 static char *spaces[] = {
   "","  ","    ","      ","        ","          ",
@@ -47,77 +51,101 @@ static char *spaces[] = {
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static void dump_spaces(int depth) {
+static void dump_spaces(int depth, size_t *written, char *buf, size_t len) {
 
   if (depth == 0) return;
   
   if (depth < MAX_SPACECOUNT) {
-    printf(spaces[depth]);
+    *written += cpyout(buf, len, spaces[depth], depth*2, *written);
   } else {    
 
     for (;;) {
-
-      printf(spaces[MAX_SPACECOUNT-1]);
+      *written += cpyout(buf, len, spaces[MAX_SPACECOUNT-1], (MAX_SPACECOUNT-1)*2, *written);
       
       depth -= MAX_SPACECOUNT-1;
       if (depth < MAX_SPACECOUNT) break;     
     }
 
-    dump_spaces(depth);
+    dump_spaces(depth, written, buf, len);
   }
 }
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-static void dump(struct jhandle *jhandle, struct jobject *jobject,
-		 int type, int depth, int pretty) {
+static size_t cpyout(char *dst, size_t dlen, char *src, size_t slen, 
+		     size_t offset) {
 
-  char *sep   = "";
-  char *nl    = "";
-  
-  if (pretty) {
-    nl = "\n";
+  size_t towrite   = 0;
+  size_t available = 0;
+
+  if (dst == (char *)0) return printf("%.*s", (int)slen, src);
+
+  if (offset < dlen) {
+    available = dlen - offset;
+
+    towrite = slen;
+    if (towrite > available) {
+      towrite = available;
+    }
+
+    if (towrite > 0) memcpy(&dst[offset], src, towrite);
   }
-  
+
+  return slen;
+}
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+static void dump(struct jhandle *jhandle, struct jobject *jobject,
+		 int type, int depth, int pretty, size_t *written,
+		 char *buf, size_t len) {
+
+  char *sep = "";
+    
   while (jobject) {
 
-    printf(sep);
+    *written += cpyout(buf, len, sep, strlen(sep), *written);
+
     if ((pretty) && (*sep != ':')) {
-      dump_spaces(depth);
+      dump_spaces(depth, written, buf, len);
     }
     
     switch (JOBJECT_TYPE(jobject)) {
 
     case AMJSON_STRING:
-      printf("\"%.*s\"", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
+      *written += cpyout(buf, len, 
+			 JOBJECT_STRING_PTR(jhandle, jobject), JOBJECT_STRING_LEN(jobject), 
+			 *written);
       break;
     case AMJSON_NUMBER:
-      printf("%.*s", JOBJECT_STRING_LEN(jobject), JOBJECT_STRING_PTR(jhandle, jobject));
+      *written += cpyout(buf, len, 
+			 JOBJECT_STRING_PTR(jhandle, jobject), JOBJECT_STRING_LEN(jobject), 
+			 *written);
       break;
     case AMJSON_OBJECT:
-      printf("{");
-      if (pretty) printf(nl);      
-      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), AMJSON_OBJECT, depth+1, pretty);
-      if (pretty) printf(nl);
-      if (pretty) dump_spaces(depth);
-      printf("}");
+      *written += cpyout(buf, len, "{", 1, *written);
+      if (pretty) *written += cpyout(buf, len, "\n", 1, *written);
+      dump(jhandle, OBJECT_FIRST_KEY(jhandle, jobject), AMJSON_OBJECT, depth+1, pretty, written, buf, len);
+      if (pretty) *written += cpyout(buf, len, "\n", 1, *written);
+      if (pretty) dump_spaces(depth, written, buf, len);
+      *written += cpyout(buf, len, "}", 1, *written);
       break;
     case AMJSON_ARRAY:
-      printf("[");
-      if (pretty) printf(nl);
-      dump(jhandle, ARRAY_FIRST(jhandle, jobject), AMJSON_ARRAY, depth+1, pretty);
-      printf(nl);
-      if (pretty) dump_spaces(depth);
-      printf("]");
+      *written += cpyout(buf, len, "[", 1, *written);
+      if (pretty) *written += cpyout(buf, len, "\n", 1, *written);
+      dump(jhandle, ARRAY_FIRST(jhandle, jobject), AMJSON_ARRAY, depth+1, pretty, written, buf, len);
+      if (pretty) *written += cpyout(buf, len, "\n", 1, *written);
+      if (pretty) dump_spaces(depth, written, buf, len);
+      *written += cpyout(buf, len, "]", 1, *written);
       break;
     case AMJSON_TRUE:
-      printf("true");
+      *written += cpyout(buf, len, "true", 4, *written);
       break;
     case AMJSON_FALSE:
-      printf("false");
+      *written += cpyout(buf, len, "false", 5, *written);
       break;
     case AMJSON_NULL:
-      printf("null");
+      *written += cpyout(buf, len, "null", 4, *written);
       break;
     }
 
@@ -146,13 +174,17 @@ static void dump(struct jhandle *jhandle, struct jobject *jobject,
 
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
-void amjson_dump(struct jhandle *jhandle, struct jobject *jobject, int pretty) {
+size_t amjson_dump(struct jhandle *jhandle, struct jobject *jobject, 
+		   int pretty, char *buf, size_t len) {
+
+  size_t written = 0;
 
   if (!jobject) jobject = JOBJECT_ROOT(jhandle);
   
-  dump(jhandle, jobject, JOBJECT_TYPE(jobject), 0, pretty);
+  dump(jhandle, jobject, JOBJECT_TYPE(jobject), 0, pretty, &written, buf, len);
 
-  printf("\n");
+  written += cpyout(buf, len, "\n", 1, written);
+  return written;
 }
 
 /* -------------------------------------------------------------------- */

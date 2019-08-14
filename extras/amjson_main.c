@@ -179,11 +179,13 @@ int main(int argc, char **argv) {
     filepath = tmpfile;
   }
 
+#if 0
 #ifndef MAP_LOCKED
 #define MAP_LOCKED 0
 #endif
 #ifndef MAP_POPULATE
 #define MAP_POPULATE 0
+#endif
 #endif
 
   if (amjson_file_map(&mhandle, filepath, MAP_LOCKED|MAP_POPULATE) == 0) {
@@ -210,9 +212,9 @@ int main(int argc, char **argv) {
 		jhandle.len/jhandle.used);
 
 	if (dump) {
-	  amjson_dump(&jhandle, (struct jobject *)0, 0);
+	  (void)amjson_dump(&jhandle, (struct jobject *)0, 0, (char *)0, 0);
 	} else if (pretty) {
-	  amjson_dump(&jhandle, (struct jobject *)0, 1);
+	  (void)amjson_dump(&jhandle, (struct jobject *)0, 1, (char *)0, 0);
 	} else if (benchmark) {
 
 	  clock_gettime(CLOCK_MONOTONIC, &end);
@@ -222,7 +224,7 @@ int main(int argc, char **argv) {
 	} else if (query) {
 	  struct jobject *jobject = amjson_query(&jhandle, JOBJECT_ROOT(&jhandle), query);
 	  if (jobject) {
-	    amjson_dump(&jhandle, jobject, 1);
+	    (void)amjson_dump(&jhandle, jobject, 1, (char *)0, 0);
 	  } else {
 	    fprintf(stderr, "'%s' not found\n", query);
 	    return 1;

@@ -44,7 +44,7 @@ int main(int argc __attribute__((unused)),
 						  amjson_string_new(&jhandle, "y", strlen("y")),
 						  (void *)0),
 				   (void *)0));    
-    amjson_dump(&jhandle, array, 1);
+    amjson_dump(&jhandle, array, 1, (char *)0, 0);
 
     amjson_free(&jhandle);
   }

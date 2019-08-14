@@ -20,7 +20,7 @@ int main(int argc __attribute__((unused)),
       struct jobject *jobject;
      
       if ((jobject = amjson_query(&jhandle, JOBJECT_ROOT(&jhandle), "name"))) {
-	amjson_dump(&jhandle, jobject, 1);
+	amjson_dump(&jhandle, jobject, 1, (char *)0, 0);
       }
     }
     amjson_free(&jhandle);
