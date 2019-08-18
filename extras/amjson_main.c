@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
       
       if (amjson_decode(&jhandle, mhandle.buf, mhandle.len) == 0) {
 	
-	fprintf(stdout, "JSON valid [file:%s size:%ld jobject:%d p:%ld]\n", 
+	fprintf(stdout, "JSON valid [file:%s size:%d jobject:%d p:%d]\n", 
 		filepath, 
 		jhandle.len,
 		jhandle.used,

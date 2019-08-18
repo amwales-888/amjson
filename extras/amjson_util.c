@@ -31,7 +31,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /* -------------------------------------------------------------------- */
 /* -------------------------------------------------------------------- */
 struct jobject *amjson_array_index(struct jhandle *jhandle,
-				   struct jobject *array, unsigned int index) {
+				   struct jobject *array, joff_t index) {
   joff_t next; 
 
   if (index >= ARRAY_COUNT(array)) return (struct jobject *)0;

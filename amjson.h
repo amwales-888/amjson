@@ -55,12 +55,19 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 				   * You may lower this number but it will affect 
 				   * the maximum nesting of your JSON objects */
 
+#define AMJSON_12                 /* 32bit offsets ( see table** ) */
+/* #define AMJSON_6 */            /* 16bit offsets ( see table** ) */
+/* #define AMJSON_3 */            /*  8bit offsets ( see table** ) */
+
 /* #define AMBIGJSON */           /* Set string offset to use 'unsigned long',
 				   * on 64 bit Linux platforms, this will allow 
 				   * us to index strings at offset >4GB The 
 				   * downside of this is that every jobject will 
 				   * now consume 16bytes instead of 12bytes on a 
 				   * 64 bit platform */
+
+/* #define USECOMPUTEDGOTO */     /* Use GCC extension for computed gotos */
+/* #define USEBRANCHHINTS */      /* Use hints to aid branch prediction */
 
 /* -------------------------------------------------------------------- *
 
@@ -93,68 +100,76 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   Linux and MacOS X LP64, Windows LLP64 
 
-                          AMJSON_8 AMJSON_16 AMJSON_32     
-  MAX Array Entries       31       8191      536870911
-  MAX Object Entries*     15       4095      268435455   *( Key/Value Pairs )
-  MAX String Length       15       4095      268435455
-  MAX Number Length       15       4095      268435455
-  MAX Jobect Pool Size    255      65535     4294967295
-  Max JSON Buffer Length  255      65535     4294967295
-  Size of Jobject         3 Bytes  6 Bytes   12 Bytes
+  **                        AMJSON_3 AMJSON_6   AMJSON_12     
+  MAX Array Entries         63       16383      1073741823
+  MAX Object Entries*       31       8191       536870911   *( Key/Value Pairs )
+  MAX String Length         63       16383      1073741823
+  MAX Number Length         63       16383      1073741823
+  MAX Jobect Pool Size      255      65535      4294967295
+  Max JSON Buffer Length    255      65535      4294967295
+  Size of Jobject           3 Bytes  6 Bytes    12 Bytes
+
+  When AMBIGJSON is defined the addressable JSON Buffer length 
+  is increased
+                            AMJSON_3 AMJSON_6   AMJSON_12
+  Max JSON Buffer Length    65535    4294967295 (2^64)-1
+  Size of Jobject AMBIGJSON 4 Bytes  8 Bytes    16 Bytes
 
  * -------------------------------------------------------------------- */
 
-#define AMJSON_32
-/* #define AMJSON_16 */
-/* #define AMJSON_8  */
-
-#ifdef AMJSON_32
+#ifdef AMJSON_12
 typedef uint32_t jsize_t;
 typedef uint32_t joff_t;
 #define JSIZE_MAX       UINT32_MAX
 #define JOFF_MAX        UINT32_MAX
-#define AMJSON_TYPEBITS 3
-#define AMJSON_LENBITS  29
+#define AMJSON_TYPEBITS 2
+#define AMJSON_LENBITS  30
 
 #ifdef AMBIGJSON
+typedef uint64_t bsize_t;     
 typedef uint64_t boff_t;     /* Offset of character into JSON buffer */
 #define BOFF_MAX        UINT64_MAX 
 #else
+typedef uint32_t bsize_t;     
 typedef uint32_t boff_t;
 #define BOFF_MAX        UINT32_MAX
 #endif
 #endif
 
-#ifdef AMJSON_16
+#ifdef AMJSON_6
 typedef uint16_t jsize_t;
 typedef uint16_t joff_t;
 #define JSIZE_MAX       UINT16_MAX
 #define JOFF_MAX        UINT16_MAX
-#define AMJSON_TYPEBITS 3
-#define AMJSON_LENBITS  13
+#define AMJSON_TYPEBITS 2
+#define AMJSON_LENBITS  14
 
 #ifdef AMBIGJSON
+typedef uint32_t bsize_t;     
 typedef uint32_t boff_t;
 #define BOFF_MAX        UINT32_MAX
 #else
+typedef uint16_t bsize_t;     
 typedef uint16_t boff_t;
 #define BOFF_MAX        UINT16_MAX
 #endif
 #endif
 
-#ifdef AMJSON_8
+#ifdef AMJSON_3
 typedef uint8_t jsize_t;
 typedef uint8_t joff_t;
 #define JSIZE_MAX       UINT8_MAX
 #define JOFF_MAX        UINT8_MAX
 
-#define AMJSON_TYPEBITS 3
-#define AMJSON_LENBITS  5
+#define AMJSON_TYPEBITS 2
+#define AMJSON_LENBITS  6
 
 #ifdef AMBIGJSON
+typedef uint16_t bsize_t;     
 typedef uint16_t boff_t;
 #define BOFF_MAX        UINT16_MAX
 #else
+typedef uint8_t bsize_t;     
 typedef uint8_t boff_t;
 #define BOFF_MAX        UINT8_MAX
 #endif
@@ -176,20 +191,21 @@ typedef uint8_t boff_t;
 
 struct jobject {
 
-#define AMJSON_UNDEFINED 0 
-#define AMJSON_OBJECT    1
-#define AMJSON_ARRAY     2 
-#define AMJSON_STRING    3 
-#define AMJSON_NUMBER    4 
-#define AMJSON_TRUE      5 
-#define AMJSON_FALSE     6 
-#define AMJSON_NULL      7 
-
-#define AMJSON_INVALID   0        /* Next offset use as value indicating 
-                                   * end of list */
+#define AMJSON_OBJECT    0        /* TRUE,FALSE and NULL are packed into 
+				   * object where len is == 0 but the value
+				   * of child is a value 4,5,6 ( this is 
+				   * not a valid combination for object so 
+                                   * we can use it ) */
+#define AMJSON_ARRAY     1 
+#define AMJSON_STRING    2 
+#define AMJSON_NUMBER    3 
+#define AMJSON_TRUE      4        /* Packed into 'child', see object */
+#define AMJSON_FALSE     5        /* Packed into 'child', see object */
+#define AMJSON_NULL      6        /* Packed into 'child', see object */
 
   jsize_t blen;                   /* type:len packed JSON_TYPEBITS 
                                    * and AMJSON_LENBITS */
+
   union {
     struct {
       joff_t  child;              /* Index of first child */
@@ -201,19 +217,22 @@ struct jobject {
     } string;
   } u;
 
+#define AMJSON_INVALID   0        /* Next offset use as value indicating 
+                                   * end of list */
+
   joff_t next;                    /* next offset into jobject pool */
 
 } __attribute__((packed));
 
 struct jhandle {
 
-  unsigned int   userbuffer:1;    /* Did user supply the buffer? */
-  unsigned int   useljmp:1;       /* We want to longjmp on allocation failure */
-
   char           *buf;            /* Unparsed json data, the JSON buffer */
   char           *eptr;           /* Pointer to character after the end of 
                                    * the JSON buffer */
-  size_t         len;             /* Length of json data */  
+  unsigned int   userbuffer:1;    /* Did user supply the buffer? */
+  unsigned int   useljmp:1;       /* We want to longjmp on allocation failure */
+
+  bsize_t        len;             /* Length of json data */  
   jmp_buf        setjmp_ctx;      /* Allows us to return from allocation failure 
 				   * from deeply nested calls */
   
@@ -238,7 +257,8 @@ struct jhandle {
 
 #define JOBJECT_ROOT(jhandle)          (JOBJECT_AT((jhandle), (jhandle)->root))
 #define JOBJECT_NEXT(jhandle,o)        ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:(JOBJECT_AT((jhandle), ((o)->next))))
-#define JOBJECT_TYPE(o)                ((o)->blen >> AMJSON_LENBITS)
+
+#define JOBJECT_TYPE(o)                ((o)->blen >> AMJSON_LENBITS)!=AMJSON_OBJECT?((o)->blen >> AMJSON_LENBITS):(((OBJECT_COUNT(o)==0)&&((o)->u.object.child!=AMJSON_INVALID))?(o)->u.object.child:AMJSON_OBJECT)
 
 #define JOBJECT_STRING_LEN(o)          ((o)->blen & AMJSON_STRLENMASK)
 #define JOBJECT_STRING_PTR(jhandle, o) (((o)->blen & AMJSON_STRBUFMASK)?((char *)(&(jhandle)->jobject[(o)->u.string.offset])):(&((jhandle)->buf[(o)->u.string.offset])))
@@ -297,7 +317,7 @@ int amjson_alloc(struct jhandle *jhandle, struct jobject *ptr, joff_t count);
  * the JSON buffer. ENOMEM indicates a problem allocating an object from
  * the jobject pool.
  */
-int amjson_decode(struct jhandle *jhandle, char *buf, jsize_t len);
+int amjson_decode(struct jhandle *jhandle, char *buf, bsize_t len);
 
 /* Summary: Release any resources held by an initialised amjson context.
  * jhandle: This is a pointer to an initialised jhandle structure.
