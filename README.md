@@ -13,7 +13,7 @@ int amjson_alloc(struct jhandle *jhandle,
                  struct jobject *ptr, joff_t count);
 
 int amjson_decode(struct jhandle *jhandle, 
-                  char *buf, jsize_t len);
+                  char *buf, bsize_t len);
 	
 void amjson_free(struct jhandle *jhandle);
 ```
