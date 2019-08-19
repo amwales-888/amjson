@@ -100,17 +100,15 @@ struct jobject *amjson_query(struct jhandle *jhandle,
     nptr = query_index(ptr);
     if (nptr == ptr) {
       nptr = query_identifier(ptr);
-      if (nptr == ptr) {
-	goto fail;
-      } else {
+      if (nptr == ptr) goto fail;
+      
+      if (JOBJECT_TYPE(jobject) != AMJSON_OBJECT) goto fail;       	
+      jobject = amjson_object_find(jhandle, jobject, ptr, (nptr - ptr));
+      if (!jobject) goto fail;    
+      
+      ptr = nptr;
+      if (*ptr == '\0') goto success;
 
-	if (JOBJECT_TYPE(jobject) != AMJSON_OBJECT) goto fail;       	
-	jobject = amjson_object_find(jhandle, jobject, ptr, (nptr - ptr));
-	if (!jobject) goto fail;    
-
-	ptr = nptr;
-	if (*ptr == '\0') goto success;
-      }
     } else {
       int index = 0;
       
@@ -129,14 +127,13 @@ struct jobject *amjson_query(struct jhandle *jhandle,
       if (!jobject) goto fail;    
 
       if (*ptr == '\0') goto success;
-
-      if ((*ptr != '.') &&
-	  (*ptr != '['))
-	goto fail;
-
-      if (*ptr == '.') ptr++;      
     }
+     
+    if ((*ptr != '.') &&
+	(*ptr != '['))
+      goto fail;
     
+    if (*ptr == '.') ptr++;      
   }
 
  success:
