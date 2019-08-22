@@ -268,9 +268,9 @@ struct jhandle {
 #define ARRAY_NEXT(jhandle, o)         ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:(JOBJECT_AT((jhandle), ((o)->next))))
 #define OBJECT_COUNT(o)                ((o)->blen & AMJSON_LENMASK)
 #define OBJECT_FIRST_KEY(jhandle, o)   ((((o)->blen & AMJSON_LENMASK) == 0)?(struct jobject *)0:(JOBJECT_AT((jhandle),(o)->u.object.child)))
-#define OBJECT_NEXT_KEY(jhandle, o)    ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
+#define OBJECT_NEXT_KEY(bhandle, o)    ((((o)->next) == AMJSON_INVALID)?(struct bobject *)0:((JOBJECT_AT((bhandle), ((o)->next))->next == AMJSON_INVALID)?(struct bobject *)0:JOBJECT_AT((bhandle),JOBJECT_AT((bhandle), ((o)->next))->next)))
 #define OBJECT_FIRST_VALUE(jhandle, o) ((((o)->blen & AMJSON_LENMASK) == 0)?(struct jobject *)0:JOBJECT_AT((jhandle), JOBJECT_AT((jhandle), (o)->u.object.child)->next))
-#define OBJECT_NEXT_VALUE(jhandle, o)  ((((o)->next) == AMJSON_INVALID)?(struct jobject *)0:JOBJECT_AT((jhandle),JOBJECT_AT((jhandle), ((o)->next))->next))
+#define OBJECT_NEXT_VALUE(bhandle, o)  ((((o)->next) == AMJSON_INVALID)?(struct bobject *)0:((JOBJECT_AT((bhandle), ((o)->next))->next == AMJSON_INVALID)?(struct bobject *)0:JOBJECT_AT((bhandle),JOBJECT_AT((bhandle), ((o)->next))->next)))
 #define JOBJECT_STRDUP(o)              ((JOBJECT_TYPE((o)) != AMJSON_STRING)?((struct jobject *)0):strndup(JOBJECT_STRING_PTR((o)),JOBJECT_STRING_LEN((o))))
 
 #define JOBJECT_P                      6
